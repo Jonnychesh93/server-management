@@ -1,0 +1,116 @@
+<?php
+
+use App\Enums\TeamRole;
+use App\Jobs\ProvisionSiteJob;
+use App\Models\GitConnection;
+use App\Models\Server;
+use App\Models\Site;
+use App\Models\SshKey;
+use Illuminate\Support\Facades\Bus;
+
+test('an owner can add a site to a server', function () {
+    Bus::fake();
+
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+
+    $this->actingAs($owner)->post(route('sites.store', $server), [
+        'domain' => 'example.com',
+        'php_version' => '8.3',
+    ])->assertRedirect();
+
+    $site = Site::where('domain', 'example.com')->first();
+
+    expect($site)->not->toBeNull();
+    expect($site->server_id)->toBe($server->id);
+    expect($site->team_id)->toBe($team->id);
+
+    Bus::assertDispatched(ProvisionSiteJob::class, fn ($job) => $job->site->is($site));
+});
+
+test('a member cannot add a site to a server', function () {
+    [$team, $member] = teamWithMember(TeamRole::Member);
+    $server = Server::factory()->for($team)->active()->create();
+
+    $this->actingAs($member)->post(route('sites.store', $server), [
+        'domain' => 'example.com',
+        'php_version' => '8.3',
+    ])->assertForbidden();
+});
+
+test('an invalid domain is rejected', function () {
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+
+    $this->actingAs($owner)->post(route('sites.store', $server), [
+        'domain' => 'not a domain; rm -rf /',
+        'php_version' => '8.3',
+    ])->assertInvalid(['domain']);
+});
+
+test('two sites on the same server cannot share a domain', function () {
+    Bus::fake();
+
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+    Site::factory()->for($team)->for($server)->create(['domain' => 'example.com']);
+
+    $this->actingAs($owner)->post(route('sites.store', $server), [
+        'domain' => 'example.com',
+        'php_version' => '8.3',
+    ])->assertInvalid(['domain']);
+});
+
+test('adding a repository generates a deploy key and git connection', function () {
+    Bus::fake();
+
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+
+    $this->actingAs($owner)->post(route('sites.store', $server), [
+        'domain' => 'example.com',
+        'php_version' => '8.3',
+        'repository' => 'git@github.com:acme/example.git',
+        'branch' => 'main',
+    ])->assertRedirect();
+
+    $site = Site::where('domain', 'example.com')->first();
+
+    $connection = GitConnection::where('site_id', $site->id)->first();
+    expect($connection)->not->toBeNull();
+    expect($connection->repository)->toBe('git@github.com:acme/example.git');
+
+    $key = SshKey::where('site_id', $site->id)->first();
+    expect($key)->not->toBeNull();
+    expect($connection->deploy_key_id)->toBe($key->id);
+});
+
+test('a user cannot view a site belonging to another team', function () {
+    [, $outsider] = teamWithMember(TeamRole::Owner);
+    $site = Site::factory()->create();
+
+    $this->actingAs($outsider)->get(route('sites.show', $site))->assertForbidden();
+});
+
+test('a manager can update a site deploy script', function () {
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+    $site = Site::factory()->for($team)->for($server)->active()->create();
+
+    $this->actingAs($owner)->put(route('sites.update', $site), [
+        'deploy_script' => 'echo "hello"',
+    ])->assertRedirect(route('sites.show', $site));
+
+    expect($site->refresh()->deploy_script)->toBe('echo "hello"');
+});
+
+test('an owner can remove a site from the server', function () {
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+    $site = Site::factory()->for($team)->for($server)->active()->create();
+
+    $this->actingAs($owner)->delete(route('sites.destroy', $site))
+        ->assertRedirect(route('servers.show', $server));
+
+    expect(Site::find($site->id))->toBeNull();
+});
