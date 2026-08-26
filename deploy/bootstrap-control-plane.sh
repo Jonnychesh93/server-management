@@ -299,6 +299,14 @@ CRON_LINE="* * * * * www-data cd ${DEPLOY_PATH} && php artisan schedule:run >> /
 echo "${CRON_LINE}" > /etc/cron.d/anchor-scheduler
 chmod 644 /etc/cron.d/anchor-scheduler
 
+# ── 11. Redeploy shortcut ────────────────────────────────────────────────
+
+cat > /usr/local/bin/anchor-deploy <<EOF
+#!/usr/bin/env bash
+exec bash "${DEPLOY_PATH}/deploy/redeploy-control-plane.sh" "\$@"
+EOF
+chmod +x /usr/local/bin/anchor-deploy
+
 echo
 echo "========================================================================"
 if [[ "${SSL_ISSUED}" == "true" ]]; then
@@ -312,9 +320,12 @@ echo
 echo "Database password (save this somewhere safe): ${DB_PASSWORD}"
 echo
 echo "Still to do manually:"
-echo "  - Register your first user by visiting https://${APP_DOMAIN}/register"
+echo "  - Public registration is disabled by default. Create your account with:"
+echo "      sudo -u www-data php artisan tinker --execute='app(App\Actions\Fortify\CreateNewUser::class)->create([\"name\" => \"Your Name\", \"email\" => \"you@example.com\", \"password\" => \"change-me\", \"password_confirmation\" => \"change-me\"]);'"
 echo "  - Real outbound email isn't configured (MAIL_MAILER=log) — team"
 echo "    invites will only appear in storage/logs/laravel.log until you"
 echo "    set real SMTP credentials in .env and run 'artisan config:cache'"
 echo "  - GitHub App integration (GITHUB_APP_*) is optional and still unset"
+echo
+echo "To deploy future changes, just run: sudo anchor-deploy"
 echo "========================================================================"
