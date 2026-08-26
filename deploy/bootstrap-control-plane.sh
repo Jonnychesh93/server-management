@@ -307,6 +307,15 @@ exec bash "${DEPLOY_PATH}/deploy/redeploy-control-plane.sh" "\$@"
 EOF
 chmod +x /usr/local/bin/anchor-deploy
 
+# A plain PATH command rather than a shell alias, so it works from any
+# shell or session (browser-based consoles included) without needing
+# .bashrc/.zshrc to be sourced first.
+cat > /usr/local/bin/deploy <<'EOF'
+#!/usr/bin/env bash
+exec sudo anchor-deploy "$@"
+EOF
+chmod +x /usr/local/bin/deploy
+
 echo
 echo "========================================================================"
 if [[ "${SSL_ISSUED}" == "true" ]]; then
@@ -327,5 +336,5 @@ echo "    invites will only appear in storage/logs/laravel.log until you"
 echo "    set real SMTP credentials in .env and run 'artisan config:cache'"
 echo "  - GitHub App integration (GITHUB_APP_*) is optional and still unset"
 echo
-echo "To deploy future changes, just run: sudo anchor-deploy"
+echo "To deploy future changes, just run: deploy"
 echo "========================================================================"
