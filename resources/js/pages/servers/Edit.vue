@@ -27,7 +27,7 @@ defineOptions({
 <template>
     <Head :title="`Edit ${server.name}`" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 p-4 md:p-6">
         <Heading
             title="Edit server"
             description="Update this server's connection details"

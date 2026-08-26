@@ -18,7 +18,7 @@ defineOptions({
 <template>
     <Head title="Create team" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 p-4 md:p-6">
         <Heading
             title="Create a team"
             description="Teams have their own servers, sites, and members"

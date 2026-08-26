@@ -80,7 +80,7 @@ function updateMemberRole(member: TeamMember, role: TeamRole): void {
 <template>
     <Head :title="team.name" />
 
-    <div class="flex flex-col space-y-8">
+    <div class="flex flex-col space-y-8 p-4 md:p-6">
         <Heading :title="team.name" description="Team settings and members" />
 
         <Card v-if="canManage">

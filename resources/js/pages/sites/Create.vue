@@ -38,7 +38,7 @@ const phpVersion = ref(phpVersions[phpVersions.length - 1] ?? phpVersions[0]);
 <template>
     <Head title="Add site" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 p-4 md:p-6">
         <Heading
             title="Add a site"
             :description="`Add a site to ${server.name}`"

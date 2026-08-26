@@ -46,7 +46,7 @@ const connectionLabel: Record<ConnectionStatus, string> = {
 <template>
     <Head title="Servers" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 p-4 md:p-6">
         <div class="flex items-center justify-between">
             <Heading
                 title="Servers"

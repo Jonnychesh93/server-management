@@ -25,7 +25,7 @@ defineOptions({
 <template>
     <Head :title="`${site.domain} deploy script`" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 p-4 md:p-6">
         <Heading
             title="Deploy script"
             description="Runs on every deployment, from the site's release directory"

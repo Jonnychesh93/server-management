@@ -49,7 +49,7 @@ watch(finished, (isFinished) => {
 <template>
     <Head :title="`Deployment #${deployment.id}`" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 p-4 md:p-6">
         <Heading
             :title="`Deployment #${deployment.id}`"
             :description="deployment.commit_message ?? undefined"

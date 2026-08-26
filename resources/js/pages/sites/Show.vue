@@ -83,7 +83,7 @@ watch(finished, (isFinished) => {
 <template>
     <Head :title="site.domain" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 p-4 md:p-6">
         <div class="flex items-center justify-between">
             <Heading :title="site.domain" />
             <div class="flex items-center gap-2">

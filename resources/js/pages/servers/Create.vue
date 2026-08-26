@@ -44,7 +44,7 @@ const credentialType = ref(credentialTypes[0] ?? 'password');
 <template>
     <Head title="Add server" />
 
-    <div class="flex flex-col space-y-6">
+    <div class="flex flex-col space-y-6 p-4 md:p-6">
         <Heading
             title="Add a server"
             description="Connect a server so it can be provisioned and managed here"

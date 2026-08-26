@@ -27,26 +27,30 @@ defineOptions({
 <template>
     <Head title="Team invitation" />
 
-    <Card class="max-w-md">
-        <CardHeader>
-            <CardTitle>Join {{ invitation.team?.name }}</CardTitle>
-            <CardDescription>
-                {{ invitation.invited_by?.name }} invited you to join as a
-                {{ invitation.role }}.
-            </CardDescription>
-        </CardHeader>
-        <CardContent />
-        <CardFooter>
-            <Form
-                v-bind="
-                    AcceptTeamInvitationController.store.form(invitation.token)
-                "
-                v-slot="{ processing }"
-            >
-                <Button type="submit" :disabled="processing">
-                    Accept invitation
-                </Button>
-            </Form>
-        </CardFooter>
-    </Card>
+    <div class="p-4 md:p-6">
+        <Card class="max-w-md">
+            <CardHeader>
+                <CardTitle>Join {{ invitation.team?.name }}</CardTitle>
+                <CardDescription>
+                    {{ invitation.invited_by?.name }} invited you to join as a
+                    {{ invitation.role }}.
+                </CardDescription>
+            </CardHeader>
+            <CardContent />
+            <CardFooter>
+                <Form
+                    v-bind="
+                        AcceptTeamInvitationController.store.form(
+                            invitation.token,
+                        )
+                    "
+                    v-slot="{ processing }"
+                >
+                    <Button type="submit" :disabled="processing">
+                        Accept invitation
+                    </Button>
+                </Form>
+            </CardFooter>
+        </Card>
+    </div>
 </template>
