@@ -1,0 +1,280 @@
+#!/usr/bin/env bash
+#
+# One-time bootstrap for a fresh Ubuntu 22.04/24.04 VPS that will host the
+# Anchor control-plane app itself (this repo). Anchor can provision servers
+# you add to it, but it can't provision the box it's running on — so this
+# script does that part by hand, once.
+#
+# Run this as root (or via sudo) on the box you're dedicating to Anchor.
+# Read it top to bottom before running it. It's interactive: it will ask
+# a handful of questions up front, then run unattended.
+#
+# What it does, in order:
+#   1. System packages, PHP 8.3, Composer, Node 22, MySQL, Redis, nginx,
+#      Supervisor, certbot, UFW
+#   2. Generates a dedicated SSH deploy key and waits for you to add it to
+#      GitHub as a read-only Deploy Key on this repo
+#   3. Clones the repo, installs dependencies, builds frontend assets
+#   4. Writes a production .env (DB credentials, Reverb keys, app key)
+#   5. Runs migrations, caches config/routes/views
+#   6. Supervisor programs for `horizon` and `reverb:start`
+#   7. nginx vhost (incl. the Reverb WebSocket proxy) + certbot SSL
+#   8. UFW firewall rules + a cron entry for the scheduler
+#
+# What it deliberately does NOT do (out of scope for a single-purpose box):
+#   - Inertia SSR (client-side rendering only; fine for a login-gated app)
+#   - Real outbound mail (MAIL_MAILER stays "log" until you configure SMTP)
+#   - Multi-app / multi-tenant FPM pool separation (this box only runs Anchor,
+#     so PHP-FPM and Supervisor both just run as www-data)
+
+set -euo pipefail
+
+if [[ "${EUID}" -ne 0 ]]; then
+    echo "Please run this script as root (sudo bash bootstrap-control-plane.sh)." >&2
+    exit 1
+fi
+
+# ── 1. Ask the questions up front ──────────────────────────────────────────
+
+read -rp "Domain Anchor will be reachable at (e.g. anchor.yoursite.com): " APP_DOMAIN
+read -rp "Admin email (SSL renewal notices + Horizon dashboard access): " ADMIN_EMAIL
+read -rp "Git repository SSH URL [git@github.com:Jonnychesh93/server-management.git]: " REPO_URL
+REPO_URL=${REPO_URL:-git@github.com:Jonnychesh93/server-management.git}
+read -rp "Deploy path [/var/www/anchor]: " DEPLOY_PATH
+DEPLOY_PATH=${DEPLOY_PATH:-/var/www/anchor}
+read -rp "MySQL database name [anchor]: " DB_NAME
+DB_NAME=${DB_NAME:-anchor}
+read -rp "MySQL app user [anchor]: " DB_USER
+DB_USER=${DB_USER:-anchor}
+DB_PASSWORD=$(openssl rand -hex 16)
+
+echo
+echo "Domain:       ${APP_DOMAIN}"
+echo "Deploy path:  ${DEPLOY_PATH}"
+echo "Database:     ${DB_NAME} (user: ${DB_USER}, password generated)"
+echo
+read -rp "Look right? Press enter to continue, Ctrl+C to abort..." _
+
+# ── 2. Base system + packages ──────────────────────────────────────────────
+
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get upgrade -y
+apt-get install -y software-properties-common curl gnupg2 ca-certificates lsb-release unzip git ufw
+
+add-apt-repository -y ppa:ondrej/php
+apt-get update
+apt-get install -y \
+    php8.3-fpm php8.3-cli php8.3-common php8.3-mysql php8.3-xml \
+    php8.3-curl php8.3-mbstring php8.3-zip php8.3-bcmath php8.3-gd \
+    php8.3-redis php8.3-intl
+
+curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+
+curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+apt-get install -y nodejs
+
+apt-get install -y mysql-server redis-server nginx supervisor certbot python3-certbot-nginx
+
+systemctl enable --now php8.3-fpm mysql redis-server nginx supervisor
+
+# ── 3. Database ─────────────────────────────────────────────────────────────
+
+mysql --execute="
+CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS '${DB_USER}'@'127.0.0.1' IDENTIFIED BY '${DB_PASSWORD}';
+GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'127.0.0.1';
+FLUSH PRIVILEGES;
+"
+
+# ── 4. Deploy key for cloning the repo ──────────────────────────────────────
+
+mkdir -p /root/.ssh
+DEPLOY_KEY_PATH=/root/.ssh/anchor_deploy_key
+if [[ ! -f "${DEPLOY_KEY_PATH}" ]]; then
+    ssh-keygen -t ed25519 -f "${DEPLOY_KEY_PATH}" -N "" -C "anchor-control-plane"
+fi
+ssh-keyscan -H github.com >> /root/.ssh/known_hosts 2>/dev/null
+
+echo
+echo "Add this deploy key to the GitHub repo (Settings > Deploy keys, read-only is enough):"
+echo "----------------------------------------------------------------------"
+cat "${DEPLOY_KEY_PATH}.pub"
+echo "----------------------------------------------------------------------"
+read -rp "Press enter once the deploy key has been added..." _
+
+# ── 5. Clone + build ─────────────────────────────────────────────────────────
+
+if [[ -d "${DEPLOY_PATH}" ]]; then
+    echo "${DEPLOY_PATH} already exists, skipping clone." >&2
+else
+    GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY_PATH} -o StrictHostKeyChecking=accept-new" \
+        git clone "${REPO_URL}" "${DEPLOY_PATH}"
+fi
+
+cd "${DEPLOY_PATH}"
+
+composer install --no-dev --optimize-autoloader --no-interaction
+npm ci
+npm run build
+
+# ── 6. .env ───────────────────────────────────────────────────────────────
+
+if [[ ! -f .env ]]; then
+    cp .env.example .env
+fi
+
+REVERB_APP_ID=$(openssl rand -hex 10)
+REVERB_APP_KEY=$(openssl rand -hex 20)
+REVERB_APP_SECRET=$(openssl rand -hex 20)
+
+set_env() {
+    local key="$1" value="$2"
+    if grep -q "^${key}=" .env; then
+        sed -i "s#^${key}=.*#${key}=${value}#" .env
+    else
+        echo "${key}=${value}" >> .env
+    fi
+}
+
+set_env "APP_ENV" "production"
+set_env "APP_DEBUG" "false"
+set_env "APP_URL" "https://${APP_DOMAIN}"
+set_env "DB_CONNECTION" "mysql"
+set_env "DB_HOST" "127.0.0.1"
+set_env "DB_PORT" "3306"
+set_env "DB_DATABASE" "${DB_NAME}"
+set_env "DB_USERNAME" "${DB_USER}"
+set_env "DB_PASSWORD" "${DB_PASSWORD}"
+set_env "HORIZON_ADMIN_EMAILS" "${ADMIN_EMAIL}"
+set_env "REVERB_APP_ID" "${REVERB_APP_ID}"
+set_env "REVERB_APP_KEY" "${REVERB_APP_KEY}"
+set_env "REVERB_APP_SECRET" "${REVERB_APP_SECRET}"
+set_env "REVERB_HOST" "127.0.0.1"
+set_env "REVERB_PORT" "8080"
+set_env "REVERB_SCHEME" "http"
+set_env "VITE_REVERB_HOST" "${APP_DOMAIN}"
+set_env "VITE_REVERB_PORT" "443"
+set_env "VITE_REVERB_SCHEME" "https"
+
+php artisan key:generate --force
+
+chown -R www-data:www-data "${DEPLOY_PATH}"
+chmod -R ug+rwx "${DEPLOY_PATH}/storage" "${DEPLOY_PATH}/bootstrap/cache"
+
+sudo -u www-data php artisan migrate --force
+sudo -u www-data php artisan storage:link
+sudo -u www-data php artisan config:cache
+sudo -u www-data php artisan route:cache
+sudo -u www-data php artisan view:cache
+
+# ── 7. Supervisor: Horizon + Reverb ─────────────────────────────────────────
+
+cat > /etc/supervisor/conf.d/anchor-horizon.conf <<EOF
+[program:anchor-horizon]
+process_name=%(program_name)s
+command=php ${DEPLOY_PATH}/artisan horizon
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=${DEPLOY_PATH}/storage/logs/horizon.log
+stopwaitsecs=3600
+EOF
+
+cat > /etc/supervisor/conf.d/anchor-reverb.conf <<EOF
+[program:anchor-reverb]
+process_name=%(program_name)s
+command=php ${DEPLOY_PATH}/artisan reverb:start
+autostart=true
+autorestart=true
+user=www-data
+redirect_stderr=true
+stdout_logfile=${DEPLOY_PATH}/storage/logs/reverb.log
+minfds=10000
+EOF
+
+supervisorctl reread
+supervisorctl update
+supervisorctl start anchor-horizon:* anchor-reverb:* || true
+
+# ── 8. nginx ─────────────────────────────────────────────────────────────
+
+cat > "/etc/nginx/sites-available/${APP_DOMAIN}" <<EOF
+server {
+    listen 80;
+    listen [::]:80;
+    server_name ${APP_DOMAIN};
+    root ${DEPLOY_PATH}/public;
+
+    index index.php;
+    charset utf-8;
+
+    client_max_body_size 20M;
+
+    location /app {
+        proxy_http_version 1.1;
+        proxy_set_header Host \$http_host;
+        proxy_set_header Scheme \$scheme;
+        proxy_set_header SERVER_PORT \$server_port;
+        proxy_set_header REMOTE_ADDR \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_pass http://127.0.0.1:8080;
+    }
+
+    location /apps {
+        proxy_http_version 1.1;
+        proxy_set_header Host \$http_host;
+        proxy_pass http://127.0.0.1:8080;
+    }
+
+    location / {
+        try_files \$uri \$uri/ /index.php?\$query_string;
+    }
+
+    location ~ \.php\$ {
+        fastcgi_pass unix:/run/php/php8.3-fpm.sock;
+        fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}
+EOF
+
+ln -sf "/etc/nginx/sites-available/${APP_DOMAIN}" "/etc/nginx/sites-enabled/${APP_DOMAIN}"
+rm -f /etc/nginx/sites-enabled/default
+nginx -t
+systemctl reload nginx
+
+certbot --nginx -d "${APP_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect
+
+# ── 9. Firewall ──────────────────────────────────────────────────────────
+
+ufw allow OpenSSH
+ufw allow "Nginx Full"
+ufw --force enable
+
+# ── 10. Scheduler cron ───────────────────────────────────────────────────
+
+CRON_LINE="* * * * * www-data cd ${DEPLOY_PATH} && php artisan schedule:run >> /dev/null 2>&1"
+echo "${CRON_LINE}" > /etc/cron.d/anchor-scheduler
+chmod 644 /etc/cron.d/anchor-scheduler
+
+echo
+echo "========================================================================"
+echo "Anchor is live at: https://${APP_DOMAIN}"
+echo
+echo "Database password (save this somewhere safe): ${DB_PASSWORD}"
+echo
+echo "Still to do manually:"
+echo "  - Register your first user by visiting https://${APP_DOMAIN}/register"
+echo "  - Real outbound email isn't configured (MAIL_MAILER=log) — team"
+echo "    invites will only appear in storage/logs/laravel.log until you"
+echo "    set real SMTP credentials in .env and run 'artisan config:cache'"
+echo "  - GitHub App integration (GITHUB_APP_*) is optional and still unset"
+echo "========================================================================"
