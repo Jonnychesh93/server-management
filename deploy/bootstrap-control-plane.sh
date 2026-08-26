@@ -62,7 +62,20 @@ apt-get update
 apt-get upgrade -y
 apt-get install -y software-properties-common curl gnupg2 ca-certificates lsb-release unzip git ufw
 
-add-apt-repository -y ppa:ondrej/php
+# The ondrej/php PPA only tracks Ubuntu LTS codenames (jammy 22.04,
+# noble 24.04) plus the current one still in transition. Anything newer
+# gets its packages from packages.sury.org instead — same maintainer,
+# just a different distribution channel. Detect which one to use.
+UBUNTU_CODENAME=$(. /etc/os-release && echo "${VERSION_CODENAME}")
+case "${UBUNTU_CODENAME}" in
+    jammy|noble)
+        add-apt-repository -y ppa:ondrej/php
+        ;;
+    *)
+        curl -sSLo /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+        echo "deb https://packages.sury.org/php/ ${UBUNTU_CODENAME} main" > /etc/apt/sources.list.d/php.list
+        ;;
+esac
 apt-get update
 apt-get install -y \
     php8.3-fpm php8.3-cli php8.3-common php8.3-mysql php8.3-xml \
