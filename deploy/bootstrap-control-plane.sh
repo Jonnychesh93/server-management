@@ -14,12 +14,21 @@
 #      Supervisor, certbot, UFW
 #   2. Generates a dedicated SSH deploy key and waits for you to add it to
 #      GitHub as a read-only Deploy Key on this repo
-#   3. Clones the repo, installs dependencies, builds frontend assets
-#   4. Writes a production .env (DB credentials, Reverb keys, app key)
-#   5. Runs migrations, caches config/routes/views
+#   3. Clones the repo into a releases/<timestamp> folder, installs
+#      dependencies, builds frontend assets
+#   4. Writes a production .env under shared/ (DB credentials, Reverb
+#      keys, app key), shared across every release
+#   5. Runs migrations, caches config/routes/views, flips the `current`
+#      symlink onto this release
 #   6. Supervisor programs for `horizon` and `reverb:start`
 #   7. nginx vhost (incl. the Reverb WebSocket proxy) + certbot SSL
 #   8. UFW firewall rules + a cron entry for the scheduler
+#
+# Every later deploy (via the installed `deploy`/`anchor-deploy` commands)
+# builds a brand new releases/<timestamp> folder the same way and only
+# flips the `current` symlink once it's fully built and migrated — so the
+# live app never serves a half-installed `vendor/` or `node_modules`
+# build, and there's no downtime window during composer/npm.
 #
 # What it deliberately does NOT do (out of scope for a single-purpose box):
 #   - Inertia SSR (client-side rendering only; fine for a login-gated app)
@@ -40,8 +49,8 @@ read -rp "Domain Anchor will be reachable at (e.g. anchor.yoursite.com): " APP_D
 read -rp "Admin email (SSL renewal notices + Horizon dashboard access): " ADMIN_EMAIL
 read -rp "Git repository SSH URL [git@github.com:Jonnychesh93/server-management.git]: " REPO_URL
 REPO_URL=${REPO_URL:-git@github.com:Jonnychesh93/server-management.git}
-read -rp "Deploy path [/var/www/anchor]: " DEPLOY_PATH
-DEPLOY_PATH=${DEPLOY_PATH:-/var/www/anchor}
+read -rp "Base path [/var/www/anchor]: " BASE_PATH
+BASE_PATH=${BASE_PATH:-/var/www/anchor}
 read -rp "MySQL database name [anchor]: " DB_NAME
 DB_NAME=${DB_NAME:-anchor}
 read -rp "MySQL app user [anchor]: " DB_USER
@@ -50,7 +59,7 @@ DB_PASSWORD=$(openssl rand -hex 16)
 
 echo
 echo "Domain:       ${APP_DOMAIN}"
-echo "Deploy path:  ${DEPLOY_PATH}"
+echo "Base path:    ${BASE_PATH}"
 echo "Database:     ${DB_NAME} (user: ${DB_USER}, password generated)"
 echo
 read -rp "Look right? Press enter to continue, Ctrl+C to abort..." _
@@ -124,26 +133,28 @@ cat "${DEPLOY_KEY_PATH}.pub"
 echo "----------------------------------------------------------------------"
 read -rp "Press enter once the deploy key has been added..." _
 
-# ── 5. Clone + build ─────────────────────────────────────────────────────────
+# ── 5. First release ─────────────────────────────────────────────────────
 
-if [[ -d "${DEPLOY_PATH}" ]]; then
-    echo "${DEPLOY_PATH} already exists, skipping clone." >&2
-else
-    GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY_PATH} -o StrictHostKeyChecking=accept-new" \
-        git clone "${REPO_URL}" "${DEPLOY_PATH}"
+RELEASE_PATH="${BASE_PATH}/releases/$(date +%Y%m%d%H%M%S)"
+mkdir -p "${BASE_PATH}/releases" "${BASE_PATH}/shared"
+
+git config --global --add safe.directory "${RELEASE_PATH}"
+GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY_PATH} -o StrictHostKeyChecking=accept-new" \
+    git clone "${REPO_URL}" "${RELEASE_PATH}"
+
+# ── 6. .env (shared across every release) ───────────────────────────────
+
+if [[ ! -f "${BASE_PATH}/shared/.env" ]]; then
+    cp "${RELEASE_PATH}/.env.example" "${BASE_PATH}/shared/.env"
 fi
+ln -sfn "${BASE_PATH}/shared/.env" "${RELEASE_PATH}/.env"
 
-cd "${DEPLOY_PATH}"
-
-composer install --no-dev --optimize-autoloader --no-interaction
-npm ci
-npm run build
-
-# ── 6. .env ───────────────────────────────────────────────────────────────
-
-if [[ ! -f .env ]]; then
-    cp .env.example .env
+mkdir -p "${BASE_PATH}/shared/storage"
+if [[ -d "${RELEASE_PATH}/storage" && ! -L "${RELEASE_PATH}/storage" ]]; then
+    cp -rn "${RELEASE_PATH}/storage/." "${BASE_PATH}/shared/storage/"
+    rm -rf "${RELEASE_PATH}/storage"
 fi
+ln -sfn "${BASE_PATH}/shared/storage" "${RELEASE_PATH}/storage"
 
 REVERB_APP_ID=$(openssl rand -hex 10)
 REVERB_APP_KEY=$(openssl rand -hex 20)
@@ -151,10 +162,10 @@ REVERB_APP_SECRET=$(openssl rand -hex 20)
 
 set_env() {
     local key="$1" value="$2"
-    if grep -q "^${key}=" .env; then
-        sed -i "s#^${key}=.*#${key}=${value}#" .env
+    if grep -q "^${key}=" "${BASE_PATH}/shared/.env"; then
+        sed -i "s#^${key}=.*#${key}=${value}#" "${BASE_PATH}/shared/.env"
     else
-        echo "${key}=${value}" >> .env
+        echo "${key}=${value}" >> "${BASE_PATH}/shared/.env"
     fi
 }
 
@@ -178,10 +189,18 @@ set_env "VITE_REVERB_HOST" "${APP_DOMAIN}"
 set_env "VITE_REVERB_PORT" "443"
 set_env "VITE_REVERB_SCHEME" "https"
 
+# ── 7. Build the first release ───────────────────────────────────────────
+
+cd "${RELEASE_PATH}"
+
+composer install --no-dev --optimize-autoloader --no-interaction
+npm ci
+npm run build
+
 php artisan key:generate --force
 
-chown -R www-data:www-data "${DEPLOY_PATH}"
-chmod -R ug+rwx "${DEPLOY_PATH}/storage" "${DEPLOY_PATH}/bootstrap/cache"
+chown -R www-data:www-data "${BASE_PATH}"
+chmod -R ug+rwx "${BASE_PATH}/shared/storage" "${RELEASE_PATH}/bootstrap/cache"
 
 sudo -u www-data php artisan migrate --force
 sudo -u www-data php artisan storage:link
@@ -189,29 +208,31 @@ sudo -u www-data php artisan config:cache
 sudo -u www-data php artisan route:cache
 sudo -u www-data php artisan view:cache
 
-# ── 7. Supervisor: Horizon + Reverb ─────────────────────────────────────────
+ln -sfn "${RELEASE_PATH}" "${BASE_PATH}/current"
+
+# ── 8. Supervisor: Horizon + Reverb ─────────────────────────────────────────
 
 cat > /etc/supervisor/conf.d/anchor-horizon.conf <<EOF
 [program:anchor-horizon]
 process_name=%(program_name)s
-command=php ${DEPLOY_PATH}/artisan horizon
+command=php ${BASE_PATH}/current/artisan horizon
 autostart=true
 autorestart=true
 user=www-data
 redirect_stderr=true
-stdout_logfile=${DEPLOY_PATH}/storage/logs/horizon.log
+stdout_logfile=${BASE_PATH}/shared/storage/logs/horizon.log
 stopwaitsecs=3600
 EOF
 
 cat > /etc/supervisor/conf.d/anchor-reverb.conf <<EOF
 [program:anchor-reverb]
 process_name=%(program_name)s
-command=php ${DEPLOY_PATH}/artisan reverb:start
+command=php ${BASE_PATH}/current/artisan reverb:start
 autostart=true
 autorestart=true
 user=www-data
 redirect_stderr=true
-stdout_logfile=${DEPLOY_PATH}/storage/logs/reverb.log
+stdout_logfile=${BASE_PATH}/shared/storage/logs/reverb.log
 minfds=10000
 EOF
 
@@ -219,14 +240,14 @@ supervisorctl reread
 supervisorctl update
 supervisorctl start anchor-horizon:* anchor-reverb:* || true
 
-# ── 8. nginx ─────────────────────────────────────────────────────────────
+# ── 9. nginx ─────────────────────────────────────────────────────────────
 
 cat > "/etc/nginx/sites-available/${APP_DOMAIN}" <<EOF
 server {
     listen 80;
     listen [::]:80;
     server_name ${APP_DOMAIN};
-    root ${DEPLOY_PATH}/public;
+    root ${BASE_PATH}/current/public;
 
     index index.php;
     charset utf-8;
@@ -287,24 +308,26 @@ if ! certbot --nginx -d "${APP_DOMAIN}" --non-interactive --agree-tos -m "${ADMI
     echo
 fi
 
-# ── 9. Firewall ──────────────────────────────────────────────────────────
+# ── 10. Firewall ──────────────────────────────────────────────────────────
 
 ufw allow OpenSSH
 ufw allow "Nginx Full"
 ufw --force enable
 
-# ── 10. Scheduler cron ───────────────────────────────────────────────────
+# ── 11. Scheduler cron ───────────────────────────────────────────────────
 
-CRON_LINE="* * * * * www-data cd ${DEPLOY_PATH} && php artisan schedule:run >> /dev/null 2>&1"
+CRON_LINE="* * * * * www-data cd ${BASE_PATH}/current && php artisan schedule:run >> /dev/null 2>&1"
 echo "${CRON_LINE}" > /etc/cron.d/anchor-scheduler
 chmod 644 /etc/cron.d/anchor-scheduler
 
-# ── 11. Redeploy shortcut ────────────────────────────────────────────────
+# ── 12. Redeploy shortcut ────────────────────────────────────────────────
 
-cat > /usr/local/bin/anchor-deploy <<EOF
-#!/usr/bin/env bash
-exec bash "${DEPLOY_PATH}/deploy/redeploy-control-plane.sh" "\$@"
-EOF
+# The canonical deploy script is installed as a standalone copy, not a
+# wrapper pointing back into a release — releases get pruned, so the
+# installed command can't depend on any specific one surviving. Every
+# successful deploy refreshes this copy from the release it just built,
+# so improvements committed to the repo take effect from the next deploy.
+cp "${RELEASE_PATH}/deploy/redeploy-control-plane.sh" /usr/local/bin/anchor-deploy
 chmod +x /usr/local/bin/anchor-deploy
 
 # A plain PATH command rather than a shell alias, so it works from any
@@ -333,7 +356,8 @@ echo "  - Public registration is disabled by default. Create your account with:"
 echo "      sudo -u www-data php artisan tinker --execute='app(App\Actions\Fortify\CreateNewUser::class)->create([\"name\" => \"Your Name\", \"email\" => \"you@example.com\", \"password\" => \"change-me\", \"password_confirmation\" => \"change-me\"]);'"
 echo "  - Real outbound email isn't configured (MAIL_MAILER=log) — team"
 echo "    invites will only appear in storage/logs/laravel.log until you"
-echo "    set real SMTP credentials in .env and run 'artisan config:cache'"
+echo "    set real SMTP credentials in ${BASE_PATH}/shared/.env and run 'deploy'"
+echo "    (or artisan config:cache directly) to pick them up"
 echo "  - GitHub App integration (GITHUB_APP_*) is optional and still unset"
 echo
 echo "To deploy future changes, just run: deploy"
