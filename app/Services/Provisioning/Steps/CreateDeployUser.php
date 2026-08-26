@@ -23,12 +23,13 @@ class CreateDeployUser implements ProvisioningStep
     {
         $user = self::USER;
 
-        // sudo's parser rejects a wildcard mixed with literal characters
-        // within a single argument (e.g. "php*-fpm") — a bare "*" token is
-        // fine, so the PHP version itself has to be spelled out literally
-        // per supported version rather than globbed.
+        // sudo's parser rejects a wildcard argument followed by further
+        // literal arguments (confirmed against a real sudoers file on the
+        // target OS — "systemctl * php8.1-fpm" fails, but the same shape
+        // with no wildcard at all, as used for nginx below, is accepted).
+        // Both the action and the version have to be spelled out literally.
         $phpFpmRules = implode("\n", array_map(
-            fn (string $version) => "{$user} ALL=(ALL) NOPASSWD: /usr/bin/systemctl * php{$version}-fpm",
+            fn (string $version) => "{$user} ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload php{$version}-fpm, /usr/bin/systemctl restart php{$version}-fpm",
             InstallPhp::SUPPORTED_VERSIONS,
         ));
 
