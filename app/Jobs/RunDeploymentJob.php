@@ -143,7 +143,12 @@ class RunDeploymentJob implements ShouldQueue
      */
     private function deployScript(string $releasePath, Site $site): string
     {
-        return "cd {$releasePath}\n{$site->deploy_script}";
+        // A non-interactive SSH exec session doesn't source shell profile
+        // files, so it can't be relied on to have /usr/local/bin (where
+        // Composer lives) on PATH the way an interactive login shell does.
+        $exportPath = 'export PATH="/usr/local/bin:$PATH"';
+
+        return "cd {$releasePath}\n{$exportPath}\n{$site->deploy_script}";
     }
 
     /**
