@@ -19,7 +19,8 @@ class BootstrapConnection
 
     public function __construct(private readonly Server $server)
     {
-        $this->client = new SSH2($server->ip_address, $server->ssh_port, 10);
+        // See SshConnection for why this is 0, not a short fixed timeout.
+        $this->client = new SSH2($server->ip_address, $server->ssh_port, 0);
 
         $credential = $server->bootstrap_credential_type === BootstrapCredentialType::PrivateKey
             ? PublicKeyLoader::load((string) $server->bootstrap_credential)

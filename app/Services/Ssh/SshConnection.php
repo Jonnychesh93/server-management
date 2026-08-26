@@ -21,7 +21,13 @@ class SshConnection
             throw new RuntimeException("Server [{$server->id}] has no control plane SSH key installed yet.");
         }
 
-        $this->client = new SFTP($server->ip_address, $server->ssh_port, 10);
+        // phpseclib3 re-applies this timeout as the total time budget for
+        // every exec() call, not just the initial connection — a long-running
+        // but silent-in-between command (e.g. apt upgrade) would otherwise get
+        // truncated mid-command, leaving the channel in a state that breaks
+        // the *next* exec() on this connection. 0 means wait indefinitely;
+        // the job's own queue timeout is the real ceiling here.
+        $this->client = new SFTP($server->ip_address, $server->ssh_port, 0);
 
         $key = PublicKeyLoader::load($server->ssh_private_key);
 
