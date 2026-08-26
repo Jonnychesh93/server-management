@@ -61,8 +61,10 @@ export DEBIAN_FRONTEND=noninteractive
 
 # Remove any ondrej/php PPA entry left over from a previous run on a
 # codename it doesn't publish for — a stale entry here breaks every
-# apt-get update below, not just the PHP install step.
-rm -f /etc/apt/sources.list.d/ondrej-ubuntu-php-*.list*
+# apt-get update below, not just the PHP install step. Newer Ubuntu
+# releases use the deb822 .sources format instead of .list, so match
+# broadly rather than assuming one extension.
+rm -f /etc/apt/sources.list.d/*ondrej*
 
 apt-get update
 apt-get upgrade -y
