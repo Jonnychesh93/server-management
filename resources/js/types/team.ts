@@ -2,11 +2,20 @@ import type { User } from '@/types/auth';
 
 export type TeamRole = 'owner' | 'admin' | 'member';
 
+export type GithubInstallation = {
+    id: number;
+    team_id: number;
+    installation_id: number;
+    account_login: string;
+    account_type: string;
+};
+
 export type Team = {
     id: number;
     name: string;
     created_at: string;
     updated_at: string;
+    github_installation?: GithubInstallation | null;
 };
 
 export type TeamMember = User & {

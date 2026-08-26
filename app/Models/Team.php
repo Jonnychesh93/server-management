@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 /**
@@ -54,6 +55,16 @@ class Team extends Model
     public function servers(): HasMany
     {
         return $this->hasMany(Server::class);
+    }
+
+    /**
+     * Get this team's linked GitHub App installation, if any.
+     *
+     * @return HasOne<GithubInstallation, $this>
+     */
+    public function githubInstallation(): HasOne
+    {
+        return $this->hasOne(GithubInstallation::class);
     }
 
     /**

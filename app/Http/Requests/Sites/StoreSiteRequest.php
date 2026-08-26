@@ -39,7 +39,8 @@ class StoreSiteRequest extends FormRequest
                 Rule::unique(Site::class)->where('server_id', $server->id),
             ],
             'php_version' => ['required', Rule::in(InstallPhp::SUPPORTED_VERSIONS)],
-            'repository' => ['nullable', 'string', 'max:255'],
+            'repository' => ['nullable', 'string', 'max:255', 'prohibited_if:github_repository,present'],
+            'github_repository' => ['nullable', 'string', 'max:255', 'regex:/^[\w.-]+\/[\w.-]+$/'],
             'branch' => ['nullable', 'string', 'max:255'],
         ];
     }

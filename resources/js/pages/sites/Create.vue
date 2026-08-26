@@ -15,11 +15,12 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { show as showServer } from '@/routes/servers';
-import type { Server } from '@/types';
+import type { GithubInstallation, Server } from '@/types';
 
-const { server, phpVersions } = defineProps<{
+const { server, phpVersions, githubInstallation } = defineProps<{
     server: Server;
     phpVersions: string[];
+    githubInstallation: GithubInstallation | null;
 }>();
 
 defineOptions({
@@ -78,6 +79,24 @@ const phpVersion = ref(phpVersions[phpVersions.length - 1] ?? phpVersions[0]);
                 <InputError :message="errors.php_version" />
             </div>
 
+            <div v-if="githubInstallation" class="grid gap-2">
+                <Label for="github_repository">
+                    GitHub repository
+                    <span class="text-muted-foreground">(optional)</span>
+                </Label>
+                <Input
+                    id="github_repository"
+                    name="github_repository"
+                    placeholder="acme/example"
+                />
+                <p class="text-sm text-muted-foreground">
+                    Any repository {{ githubInstallation.account_login }} has
+                    granted this app access to. Deploys automatically on push,
+                    no deploy key needed.
+                </p>
+                <InputError :message="errors.github_repository" />
+            </div>
+
             <div class="grid gap-2">
                 <Label for="repository">
                     Git repository
@@ -90,6 +109,11 @@ const phpVersion = ref(phpVersions[phpVersions.length - 1] ?? phpVersions[0]);
                 />
                 <p class="text-sm text-muted-foreground">
                     We'll generate a deploy key you can add to this repository.
+                    {{
+                        githubInstallation
+                            ? 'Leave the GitHub repository field above empty to use this instead.'
+                            : ''
+                    }}
                 </p>
                 <InputError :message="errors.repository" />
             </div>

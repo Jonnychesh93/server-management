@@ -15,4 +15,5 @@ require __DIR__.'/sites.php';
 require __DIR__.'/deployments.php';
 require __DIR__.'/daemons.php';
 require __DIR__.'/crons.php';
+require __DIR__.'/github.php';
 require __DIR__.'/webhooks.php';

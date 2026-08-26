@@ -2,6 +2,7 @@
 import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
 import { Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
+import GithubInstallationController from '@/actions/App/Http/Controllers/GithubInstallationController';
 import TeamController from '@/actions/App/Http/Controllers/Teams/TeamController';
 import TeamInvitationController from '@/actions/App/Http/Controllers/Teams/TeamInvitationController';
 import TeamMemberController from '@/actions/App/Http/Controllers/Teams/TeamMemberController';
@@ -36,6 +37,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
+import { install as installGithub } from '@/routes/github';
 import type { Team, TeamInvitation, TeamMember, TeamRole } from '@/types';
 
 const { team, canManage } = defineProps<{
@@ -281,6 +283,44 @@ function updateMemberRole(member: TeamMember, role: TeamRole): void {
 
                     <Button :disabled="processing">Send invite</Button>
                 </Form>
+            </CardContent>
+        </Card>
+
+        <Card v-if="canManage">
+            <CardHeader>
+                <CardTitle>GitHub</CardTitle>
+                <CardDescription>
+                    Connect a GitHub account to deploy repositories without
+                    managing your own deploy keys
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div
+                    v-if="team.github_installation"
+                    class="flex items-center justify-between"
+                >
+                    <p class="text-sm">
+                        Connected as
+                        <span class="font-medium">{{
+                            team.github_installation.account_login
+                        }}</span>
+                    </p>
+                    <Form
+                        v-bind="GithubInstallationController.destroy.form()"
+                        v-slot="{ processing }"
+                    >
+                        <Button
+                            type="submit"
+                            variant="outline"
+                            :disabled="processing"
+                        >
+                            Disconnect
+                        </Button>
+                    </Form>
+                </div>
+                <Button v-else as-child>
+                    <a :href="installGithub.url()">Connect GitHub</a>
+                </Button>
             </CardContent>
         </Card>
 

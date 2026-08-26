@@ -47,7 +47,11 @@ class TeamController extends Controller
     {
         Gate::authorize('view', $team);
 
-        $team->load(['users' => fn ($query) => $query->orderBy('team_user.created_at'), 'invitations']);
+        $team->load([
+            'users' => fn ($query) => $query->orderBy('team_user.created_at'),
+            'invitations',
+            'githubInstallation',
+        ]);
 
         return Inertia::render('teams/Show', [
             'team' => $team,

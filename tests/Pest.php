@@ -106,3 +106,19 @@ function fakeSiteSshConnector(callable $onRun): SshConnector
 
     return $connector;
 }
+
+/**
+ * A throwaway RSA private key (PEM), generated once per test run, for
+ * signing GitHub App JWTs in tests without touching a real key.
+ */
+function fakeGithubAppPrivateKey(): string
+{
+    static $key = null;
+
+    if ($key === null) {
+        $resource = openssl_pkey_new(['private_key_bits' => 2048, 'private_key_type' => OPENSSL_KEYTYPE_RSA]);
+        openssl_pkey_export($resource, $key);
+    }
+
+    return $key;
+}

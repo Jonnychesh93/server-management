@@ -4,7 +4,6 @@ namespace App\Services\Git;
 
 use App\Enums\GitProvider;
 use App\Models\GitConnection;
-use RuntimeException;
 
 class GitConnectionProviderFactory
 {
@@ -12,7 +11,7 @@ class GitConnectionProviderFactory
     {
         return match ($connection->provider) {
             GitProvider::Manual => new ManualGitProvider($connection),
-            GitProvider::GitHubApp => throw new RuntimeException('The GitHub App git provider is not implemented yet.'),
+            GitProvider::GitHubApp => new GitHubAppProvider($connection),
         };
     }
 }

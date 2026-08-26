@@ -33,6 +33,7 @@ class SiteController extends Controller
         return Inertia::render('sites/Create', [
             'server' => $server,
             'phpVersions' => InstallPhp::SUPPORTED_VERSIONS,
+            'githubInstallation' => $server->team->githubInstallation,
         ]);
     }
 
@@ -49,7 +50,18 @@ class SiteController extends Controller
                 'deploy_script' => Site::DEFAULT_DEPLOY_SCRIPT,
             ]);
 
-            if ($request->validated('repository')) {
+            if ($request->validated('github_repository')) {
+                $installation = $server->team->githubInstallation;
+
+                if ($installation) {
+                    $site->gitConnection()->create([
+                        'provider' => GitProvider::GitHubApp,
+                        'repository' => $request->validated('github_repository'),
+                        'branch' => $request->validated('branch') ?: 'main',
+                        'installation_id' => (string) $installation->installation_id,
+                    ]);
+                }
+            } elseif ($request->validated('repository')) {
                 $key = KeyPairGenerator::generateEd25519();
 
                 $sshKey = $site->sshKeys()->create([
@@ -97,12 +109,14 @@ class SiteController extends Controller
         $canManageEnvironment = $request->user()->canManage($site->team);
         $site->load(['gitConnection.deployKey', 'deployments' => fn ($query) => $query->limit(10)]);
 
+        $isManualConnection = $site->gitConnection?->provider === GitProvider::Manual;
+
         return Inertia::render('sites/Show', [
             'site' => $site,
             'canManageEnvironment' => $canManageEnvironment,
             'env' => $canManageEnvironment ? $site->env_encrypted : null,
-            'webhookSecret' => $canManageEnvironment ? $site->gitConnection?->webhook_secret : null,
-            'webhookUrl' => $site->gitConnection ? route('webhooks.sites.deploy', $site) : null,
+            'webhookSecret' => $canManageEnvironment && $isManualConnection ? $site->gitConnection->webhook_secret : null,
+            'webhookUrl' => $isManualConnection ? route('webhooks.sites.deploy', $site) : null,
         ]);
     }
 
