@@ -23,6 +23,15 @@ class CreateDeployUser implements ProvisioningStep
     {
         $user = self::USER;
 
+        // sudo's parser rejects a wildcard mixed with literal characters
+        // within a single argument (e.g. "php*-fpm") — a bare "*" token is
+        // fine, so the PHP version itself has to be spelled out literally
+        // per supported version rather than globbed.
+        $phpFpmRules = implode("\n", array_map(
+            fn (string $version) => "{$user} ALL=(ALL) NOPASSWD: /usr/bin/systemctl * php{$version}-fpm",
+            InstallPhp::SUPPORTED_VERSIONS,
+        ));
+
         return <<<BASH
             set -e
             id -u {$user} &>/dev/null || useradd --create-home --shell /bin/bash {$user}
@@ -33,7 +42,7 @@ class CreateDeployUser implements ProvisioningStep
             chmod 600 /home/{$user}/.ssh/authorized_keys
             cat > /etc/sudoers.d/{$user} <<'SUDOERS'
             {$user} ALL=(ALL) NOPASSWD: /usr/bin/systemctl reload nginx, /usr/bin/systemctl restart nginx
-            {$user} ALL=(ALL) NOPASSWD: /usr/bin/systemctl * php*-fpm
+            {$phpFpmRules}
             {$user} ALL=(ALL) NOPASSWD: /usr/bin/supervisorctl *
             {$user} ALL=(ALL) NOPASSWD: /usr/bin/certbot *
             SUDOERS
