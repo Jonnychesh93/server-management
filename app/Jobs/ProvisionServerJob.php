@@ -88,7 +88,13 @@ class ProvisionServerJob implements ShouldQueue
 
             $relay(">>> {$step->name()}\n");
 
-            $result = $connection->run($step->script($this->server), $relay);
+            try {
+                $result = $connection->run($step->script($this->server), $relay);
+            } catch (Throwable $e) {
+                $this->recordFailure($step->name(), $e->getMessage());
+
+                return;
+            }
 
             if (! $result->successful()) {
                 $this->recordFailure($step->name(), "Command exited with status {$result->exitCode}.");
