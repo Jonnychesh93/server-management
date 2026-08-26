@@ -37,7 +37,17 @@ class InstallPhp extends AptStep
         return <<<BASH
             set -e
             export DEBIAN_FRONTEND=noninteractive
-            add-apt-repository -y ppa:ondrej/php
+            rm -f /etc/apt/sources.list.d/*ondrej*
+            UBUNTU_CODENAME=\$(. /etc/os-release && echo "\${VERSION_CODENAME}")
+            case "\${UBUNTU_CODENAME}" in
+                jammy|noble)
+                    add-apt-repository -y ppa:ondrej/php
+                    ;;
+                *)
+                    curl -sSLo /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+                    echo "deb https://packages.sury.org/php/ \${UBUNTU_CODENAME} main" > /etc/apt/sources.list.d/php.list
+                    ;;
+            esac
             apt-get update -y
             apt-get install -y php{$version}-fpm php{$version}-cli php{$version}-common \\
                 php{$version}-mysql php{$version}-pgsql php{$version}-xml php{$version}-curl \\
