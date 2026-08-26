@@ -85,6 +85,12 @@ class SshConnection
 
         $this->client->chmod($mode, $tempPath);
 
+        // phpseclib3's SFTP rename never requests the protocol's overwrite
+        // flag, so it fails outright if $remotePath already exists — which
+        // it will on every write after the first for anything meant to be
+        // idempotently rewritten (env files, deploy keys, nginx configs).
+        $this->client->delete($remotePath, false);
+
         if (! $this->client->rename($tempPath, $remotePath)) {
             throw new RuntimeException("Failed to move {$tempPath} into place at {$remotePath}.");
         }
