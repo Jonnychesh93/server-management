@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, setLayoutProps } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import SiteController from '@/actions/App/Http/Controllers/SiteController';
 import Heading from '@/components/Heading.vue';
@@ -23,13 +23,11 @@ const { server, phpVersions, githubInstallation } = defineProps<{
     githubInstallation: GithubInstallation | null;
 }>();
 
-defineOptions({
-    layout: {
-        breadcrumbs: [
-            { title: server.name, href: showServer(server.id) },
-            { title: 'Add site', href: '' },
-        ],
-    },
+setLayoutProps({
+    breadcrumbs: [
+        { title: server.name, href: showServer(server.id) },
+        { title: 'Add site', href: '' },
+    ],
 });
 
 const phpVersion = ref(phpVersions[phpVersions.length - 1] ?? phpVersions[0]);

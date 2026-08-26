@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, setLayoutProps } from '@inertiajs/vue3';
 import ServerController from '@/actions/App/Http/Controllers/ServerController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -13,14 +13,12 @@ const { server } = defineProps<{
     server: Server;
 }>();
 
-defineOptions({
-    layout: {
-        breadcrumbs: [
-            { title: 'Servers', href: serversIndex() },
-            { title: server.name, href: showServer(server.id) },
-            { title: 'Edit', href: '' },
-        ],
-    },
+setLayoutProps({
+    breadcrumbs: [
+        { title: 'Servers', href: serversIndex() },
+        { title: server.name, href: showServer(server.id) },
+        { title: 'Edit', href: '' },
+    ],
 });
 </script>
 

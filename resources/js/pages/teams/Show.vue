@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, Link, router, usePage } from '@inertiajs/vue3';
+import { Form, Head, Link, router, setLayoutProps, usePage } from '@inertiajs/vue3';
 import { Trash2 } from '@lucide/vue';
 import { computed, ref } from 'vue';
 import GithubInstallationController from '@/actions/App/Http/Controllers/GithubInstallationController';
@@ -45,10 +45,8 @@ const { team, canManage } = defineProps<{
     canManage: boolean;
 }>();
 
-defineOptions({
-    layout: {
-        breadcrumbs: [{ title: team.name, href: '' }],
-    },
+setLayoutProps({
+    breadcrumbs: [{ title: team.name, href: '' }],
 });
 
 const page = usePage();

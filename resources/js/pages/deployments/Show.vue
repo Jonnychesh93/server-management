@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, setLayoutProps } from '@inertiajs/vue3';
 import { watch } from 'vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
@@ -12,16 +12,14 @@ const { deployment } = defineProps<{
     deployment: Deployment;
 }>();
 
-defineOptions({
-    layout: {
-        breadcrumbs: [
-            {
-                title: deployment.site?.domain ?? 'Site',
-                href: deployment.site ? showSite(deployment.site.id) : '',
-            },
-            { title: `Deployment #${deployment.id}`, href: '' },
-        ],
-    },
+setLayoutProps({
+    breadcrumbs: [
+        {
+            title: deployment.site?.domain ?? 'Site',
+            href: deployment.site ? showSite(deployment.site.id) : '',
+        },
+        { title: `Deployment #${deployment.id}`, href: '' },
+    ],
 });
 
 const statusVariant: Record<

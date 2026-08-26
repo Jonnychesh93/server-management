@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/vue3';
 import { Pencil, Plus, Trash2 } from '@lucide/vue';
 import { watch } from 'vue';
 import ServerController from '@/actions/App/Http/Controllers/ServerController';
@@ -42,13 +42,11 @@ const siteStatusVariant: Record<
     disabled: 'outline',
 };
 
-defineOptions({
-    layout: {
-        breadcrumbs: [
-            { title: 'Servers', href: serversIndex() },
-            { title: server.name, href: '' },
-        ],
-    },
+setLayoutProps({
+    breadcrumbs: [
+        { title: 'Servers', href: serversIndex() },
+        { title: server.name, href: '' },
+    ],
 });
 
 const provisioningVariant: Record<

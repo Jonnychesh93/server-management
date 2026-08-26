@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head, Link, router } from '@inertiajs/vue3';
+import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/vue3';
 import { Pencil, Rocket } from '@lucide/vue';
 import { watch } from 'vue';
 import DeploymentController from '@/actions/App/Http/Controllers/DeploymentController';
@@ -32,10 +32,8 @@ const { site, canManageEnvironment, env, webhookUrl, webhookSecret } =
         webhookSecret: string | null;
     }>();
 
-defineOptions({
-    layout: {
-        breadcrumbs: [{ title: site.domain, href: '' }],
-    },
+setLayoutProps({
+    breadcrumbs: [{ title: site.domain, href: '' }],
 });
 
 const statusVariant: Record<

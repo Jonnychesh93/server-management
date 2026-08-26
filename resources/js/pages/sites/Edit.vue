@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Form, Head } from '@inertiajs/vue3';
+import { Form, Head, setLayoutProps } from '@inertiajs/vue3';
 import SiteController from '@/actions/App/Http/Controllers/SiteController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -12,13 +12,11 @@ const { site } = defineProps<{
     site: Site;
 }>();
 
-defineOptions({
-    layout: {
-        breadcrumbs: [
-            { title: site.domain, href: showSite(site.id) },
-            { title: 'Deploy script', href: '' },
-        ],
-    },
+setLayoutProps({
+    breadcrumbs: [
+        { title: site.domain, href: showSite(site.id) },
+        { title: 'Deploy script', href: '' },
+    ],
 });
 </script>
 
