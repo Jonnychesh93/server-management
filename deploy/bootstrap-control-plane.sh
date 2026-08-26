@@ -259,6 +259,11 @@ server {
         fastcgi_pass unix:/run/php/php8.3-fpm.sock;
         fastcgi_param SCRIPT_FILENAME \$realpath_root\$fastcgi_script_name;
         include fastcgi_params;
+        # Vite's module-preload Link headers plus encrypted session/XSRF
+        # cookies exceed nginx's default FastCGI buffer, causing
+        # "upstream sent too big header" on every page load.
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
     }
 
     location ~ /\.(?!well-known).* {
