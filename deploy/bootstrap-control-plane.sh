@@ -10,19 +10,21 @@
 # a handful of questions up front, then run unattended.
 #
 # What it does, in order:
-#   1. System packages, PHP 8.3, Composer, Node 22, MySQL, Redis, nginx,
+#   1. Adds a 2GB swapfile if none exists — small VPS instances OOM-kill
+#      MySQL/npm/composer without it under memory pressure
+#   2. System packages, PHP 8.3, Composer, Node 22, MySQL, Redis, nginx,
 #      Supervisor, certbot, UFW
-#   2. Generates a dedicated SSH deploy key and waits for you to add it to
+#   3. Generates a dedicated SSH deploy key and waits for you to add it to
 #      GitHub as a read-only Deploy Key on this repo
-#   3. Clones the repo into a releases/<timestamp> folder, installs
+#   4. Clones the repo into a releases/<timestamp> folder, installs
 #      dependencies, builds frontend assets
-#   4. Writes a production .env under shared/ (DB credentials, Reverb
+#   5. Writes a production .env under shared/ (DB credentials, Reverb
 #      keys, app key), shared across every release
-#   5. Runs migrations, caches config/routes/views, flips the `current`
+#   6. Runs migrations, caches config/routes/views, flips the `current`
 #      symlink onto this release
-#   6. Supervisor programs for `horizon` and `reverb:start`
-#   7. nginx vhost (incl. the Reverb WebSocket proxy) + certbot SSL
-#   8. UFW firewall rules + a cron entry for the scheduler
+#   7. Supervisor programs for `horizon` and `reverb:start`
+#   8. nginx vhost (incl. the Reverb WebSocket proxy) + certbot SSL
+#   9. UFW firewall rules + a cron entry for the scheduler
 #
 # Every later deploy (via the installed `deploy`/`anchor-deploy` commands)
 # builds a brand new releases/<timestamp> folder the same way and only
@@ -64,7 +66,22 @@ echo "Database:     ${DB_NAME} (user: ${DB_USER}, password generated)"
 echo
 read -rp "Look right? Press enter to continue, Ctrl+C to abort..." _
 
-# ── 2. Base system + packages ──────────────────────────────────────────────
+# ── 2. Swap ────────────────────────────────────────────────────────────────
+
+# MySQL, Redis, PHP-FPM, Horizon, Reverb, and nginx all running together
+# leave little headroom on a small VPS, and a memory spike during
+# npm/composer can OOM-kill anything on the box — MySQL included. Add
+# swap so the kernel pages out under pressure instead of killing
+# processes, unless swap is already configured.
+if [[ "$(swapon --show | wc -l)" -eq 0 && ! -f /swapfile ]]; then
+    fallocate -l 2G /swapfile
+    chmod 600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    echo '/swapfile none swap sw 0 0' >> /etc/fstab
+fi
+
+# ── 3. Base system + packages ──────────────────────────────────────────────
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -108,7 +125,7 @@ apt-get install -y mysql-server redis-server nginx supervisor certbot python3-ce
 
 systemctl enable --now php8.3-fpm mysql redis-server nginx supervisor
 
-# ── 3. Database ─────────────────────────────────────────────────────────────
+# ── 4. Database ─────────────────────────────────────────────────────────────
 
 mysql --execute="
 CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -117,7 +134,7 @@ GRANT ALL PRIVILEGES ON \`${DB_NAME}\`.* TO '${DB_USER}'@'127.0.0.1';
 FLUSH PRIVILEGES;
 "
 
-# ── 4. Deploy key for cloning the repo ──────────────────────────────────────
+# ── 5. Deploy key for cloning the repo ──────────────────────────────────────
 
 mkdir -p /root/.ssh
 DEPLOY_KEY_PATH=/root/.ssh/anchor_deploy_key
@@ -133,7 +150,7 @@ cat "${DEPLOY_KEY_PATH}.pub"
 echo "----------------------------------------------------------------------"
 read -rp "Press enter once the deploy key has been added..." _
 
-# ── 5. First release ─────────────────────────────────────────────────────
+# ── 6. First release ─────────────────────────────────────────────────────
 
 RELEASE_PATH="${BASE_PATH}/releases/$(date +%Y%m%d%H%M%S)"
 mkdir -p "${BASE_PATH}/releases" "${BASE_PATH}/shared"
@@ -142,7 +159,7 @@ git config --global --add safe.directory "${RELEASE_PATH}"
 GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY_PATH} -o StrictHostKeyChecking=accept-new" \
     git clone "${REPO_URL}" "${RELEASE_PATH}"
 
-# ── 6. .env (shared across every release) ───────────────────────────────
+# ── 7. .env (shared across every release) ───────────────────────────────
 
 if [[ ! -f "${BASE_PATH}/shared/.env" ]]; then
     cp "${RELEASE_PATH}/.env.example" "${BASE_PATH}/shared/.env"
@@ -189,7 +206,7 @@ set_env "VITE_REVERB_HOST" "${APP_DOMAIN}"
 set_env "VITE_REVERB_PORT" "443"
 set_env "VITE_REVERB_SCHEME" "https"
 
-# ── 7. Build the first release ───────────────────────────────────────────
+# ── 8. Build the first release ───────────────────────────────────────────
 
 cd "${RELEASE_PATH}"
 
@@ -210,7 +227,7 @@ sudo -u www-data php artisan view:cache
 
 ln -sfn "${RELEASE_PATH}" "${BASE_PATH}/current"
 
-# ── 8. Supervisor: Horizon + Reverb ─────────────────────────────────────────
+# ── 9. Supervisor: Horizon + Reverb ─────────────────────────────────────────
 
 cat > /etc/supervisor/conf.d/anchor-horizon.conf <<EOF
 [program:anchor-horizon]
@@ -240,7 +257,7 @@ supervisorctl reread
 supervisorctl update
 supervisorctl start anchor-horizon:* anchor-reverb:* || true
 
-# ── 9. nginx ─────────────────────────────────────────────────────────────
+# ── 10. nginx ─────────────────────────────────────────────────────────────
 
 cat > "/etc/nginx/sites-available/${APP_DOMAIN}" <<EOF
 server {
@@ -308,19 +325,19 @@ if ! certbot --nginx -d "${APP_DOMAIN}" --non-interactive --agree-tos -m "${ADMI
     echo
 fi
 
-# ── 10. Firewall ──────────────────────────────────────────────────────────
+# ── 11. Firewall ──────────────────────────────────────────────────────────
 
 ufw allow OpenSSH
 ufw allow "Nginx Full"
 ufw --force enable
 
-# ── 11. Scheduler cron ───────────────────────────────────────────────────
+# ── 12. Scheduler cron ───────────────────────────────────────────────────
 
 CRON_LINE="* * * * * www-data cd ${BASE_PATH}/current && php artisan schedule:run >> /dev/null 2>&1"
 echo "${CRON_LINE}" > /etc/cron.d/anchor-scheduler
 chmod 644 /etc/cron.d/anchor-scheduler
 
-# ── 12. Redeploy shortcut ────────────────────────────────────────────────
+# ── 13. Redeploy shortcut ────────────────────────────────────────────────
 
 # The canonical deploy script is installed as a standalone copy, not a
 # wrapper pointing back into a release — releases get pruned, so the
