@@ -272,7 +272,15 @@ rm -f /etc/nginx/sites-enabled/default
 nginx -t
 systemctl reload nginx
 
-certbot --nginx -d "${APP_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect
+SSL_ISSUED=true
+if ! certbot --nginx -d "${APP_DOMAIN}" --non-interactive --agree-tos -m "${ADMIN_EMAIL}" --redirect; then
+    SSL_ISSUED=false
+    echo
+    echo "Certbot failed — usually because ${APP_DOMAIN} doesn't point at this"
+    echo "server's IP yet. Continuing without SSL for now; once DNS resolves,"
+    echo "re-run: certbot --nginx -d ${APP_DOMAIN} --non-interactive --agree-tos -m ${ADMIN_EMAIL} --redirect"
+    echo
+fi
 
 # ── 9. Firewall ──────────────────────────────────────────────────────────
 
@@ -288,7 +296,13 @@ chmod 644 /etc/cron.d/anchor-scheduler
 
 echo
 echo "========================================================================"
-echo "Anchor is live at: https://${APP_DOMAIN}"
+if [[ "${SSL_ISSUED}" == "true" ]]; then
+    echo "Anchor is live at: https://${APP_DOMAIN}"
+else
+    echo "Anchor is set up but has no SSL certificate yet — point DNS at this"
+    echo "server's IP, then re-run the certbot command printed above."
+    echo "Until then it's reachable at: http://${APP_DOMAIN}"
+fi
 echo
 echo "Database password (save this somewhere safe): ${DB_PASSWORD}"
 echo
