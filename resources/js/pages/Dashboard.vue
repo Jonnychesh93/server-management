@@ -5,6 +5,7 @@ import { computed } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { capitalize } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { show as showDeployment } from '@/routes/deployments';
 import {
@@ -294,7 +295,7 @@ function timeAgo(date: string): string {
                                     ]
                                 "
                             >
-                                {{ server.provisioning_status }}
+                                {{ capitalize(server.provisioning_status) }}
                             </Badge>
                         </Link>
                     </CardContent>
@@ -319,7 +320,7 @@ function timeAgo(date: string): string {
                         >
                             <span>{{ deploy.site?.domain }}</span>
                             <Badge :variant="deploymentVariant[deploy.status]">
-                                {{ deploy.status }}
+                                {{ capitalize(deploy.status) }}
                             </Badge>
                         </Link>
                     </CardContent>

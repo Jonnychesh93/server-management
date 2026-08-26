@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLiveOutput } from '@/composables/useLiveOutput';
+import { capitalize } from '@/lib/utils';
 import { destroy as destroyCron } from '@/routes/crons';
 import { destroy as destroyDaemon } from '@/routes/daemons';
 import { edit as editServer, index as serversIndex } from '@/routes/servers';
@@ -108,10 +109,10 @@ watch(finished, (isFinished) => {
 
         <div class="flex items-center gap-2">
             <Badge :variant="provisioningVariant[server.provisioning_status]">
-                Provisioning: {{ server.provisioning_status }}
+                Provisioning: {{ capitalize(server.provisioning_status) }}
             </Badge>
             <Badge :variant="connectionVariant[server.connection_status]">
-                {{ server.connection_status }}
+                {{ capitalize(server.connection_status) }}
             </Badge>
         </div>
 
@@ -197,7 +198,7 @@ watch(finished, (isFinished) => {
                         <CardContent class="flex items-center justify-between">
                             <span class="font-medium">{{ site.domain }}</span>
                             <Badge :variant="siteStatusVariant[site.status]">
-                                {{ site.status }}
+                                {{ capitalize(site.status) }}
                             </Badge>
                         </CardContent>
                     </Card>
@@ -244,7 +245,7 @@ watch(finished, (isFinished) => {
                                       : 'outline'
                             "
                         >
-                            {{ daemon.status }}
+                            {{ capitalize(daemon.status) }}
                         </Badge>
                         <Link
                             :href="destroyDaemon(daemon.id)"
@@ -297,7 +298,7 @@ watch(finished, (isFinished) => {
                                       : 'outline'
                             "
                         >
-                            {{ cron.status }}
+                            {{ capitalize(cron.status) }}
                         </Badge>
                         <Link
                             :href="destroyCron(cron.id)"

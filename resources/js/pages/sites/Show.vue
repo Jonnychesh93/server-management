@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { useLiveOutput } from '@/composables/useLiveOutput';
+import { capitalize } from '@/lib/utils';
 import { show as showDeployment } from '@/routes/deployments';
 import { edit as editSite } from '@/routes/sites';
 import type { DeploymentStatus, Site, SiteStatus, SslStatus } from '@/types';
@@ -107,10 +108,10 @@ watch(finished, (isFinished) => {
 
         <div class="flex items-center gap-2">
             <Badge :variant="statusVariant[site.status]">
-                {{ site.status }}
+                {{ capitalize(site.status) }}
             </Badge>
             <Badge :variant="sslVariant[site.ssl_status]">
-                SSL: {{ site.ssl_status }}
+                SSL: {{ capitalize(site.ssl_status) }}
             </Badge>
             <span class="text-sm text-muted-foreground">
                 PHP {{ site.php_version }}
@@ -185,7 +186,7 @@ Secret: {{ webhookSecret }}</pre>
                 >
                     <span class="flex items-center gap-2">
                         <Badge :variant="deploymentVariant[deploy.status]">
-                            {{ deploy.status }}
+                            {{ capitalize(deploy.status) }}
                         </Badge>
                         <span v-if="deploy.commit_sha">{{
                             deploy.commit_sha.slice(0, 7)

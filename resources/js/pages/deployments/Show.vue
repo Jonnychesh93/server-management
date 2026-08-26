@@ -5,6 +5,7 @@ import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useLiveOutput } from '@/composables/useLiveOutput';
+import { capitalize } from '@/lib/utils';
 import { show as showSite } from '@/routes/sites';
 import type { Deployment, DeploymentStatus } from '@/types';
 
@@ -55,7 +56,7 @@ watch(finished, (isFinished) => {
 
         <div class="flex items-center gap-2">
             <Badge :variant="statusVariant[deployment.status]">
-                {{ deployment.status }}
+                {{ capitalize(deployment.status) }}
             </Badge>
             <span
                 v-if="deployment.commit_sha"

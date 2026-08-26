@@ -11,6 +11,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { capitalize } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { create as createServer, show as showServer } from '@/routes/servers';
 import type { ConnectionStatus, ProvisioningStatus, Server } from '@/types';
@@ -84,7 +85,7 @@ const connectionLabel: Record<ConnectionStatus, string> = {
                                     ]
                                 "
                             >
-                                {{ server.provisioning_status }}
+                                {{ capitalize(server.provisioning_status) }}
                             </Badge>
                         </div>
                         <CardDescription
