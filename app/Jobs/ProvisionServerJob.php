@@ -64,7 +64,14 @@ class ProvisionServerJob implements ShouldQueue
         $this->server->forceFill(['provisioning_status' => ServerProvisioningStatus::Connecting])->save();
 
         try {
-            $connection = $connector->bootstrap($this->server)->installControlPlaneKey();
+            // A previous attempt may have already generated and installed
+            // our own key — reuse it instead of re-authenticating with the
+            // original bootstrap credential, which a prior attempt may have
+            // already invalidated (CreateDeployUser disables SSH password
+            // authentication once it runs).
+            $connection = $this->server->ssh_private_key
+                ? $connector->connectAsRoot($this->server)
+                : $connector->bootstrap($this->server)->installControlPlaneKey();
         } catch (Throwable $e) {
             $this->recordFailure('connecting', $e->getMessage());
 
