@@ -12,6 +12,7 @@ use App\Services\Provisioning\ProvisioningStep;
 use App\Services\Provisioning\Steps\ConfigureSwap;
 use App\Services\Provisioning\Steps\CreateDeployUser;
 use App\Services\Provisioning\Steps\InstallCertbot;
+use App\Services\Provisioning\Steps\InstallComposer;
 use App\Services\Provisioning\Steps\InstallFirewall;
 use App\Services\Provisioning\Steps\InstallMysql;
 use App\Services\Provisioning\Steps\InstallNginx;
@@ -45,6 +46,7 @@ class ProvisionServerJob implements ShouldQueue
         InstallFirewall::class,
         InstallNginx::class,
         InstallPhp::class,
+        InstallComposer::class,
         InstallMysql::class,
         InstallRedis::class,
         InstallSupervisor::class,
