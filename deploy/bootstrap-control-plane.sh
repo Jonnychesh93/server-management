@@ -58,6 +58,12 @@ read -rp "Look right? Press enter to continue, Ctrl+C to abort..." _
 # ── 2. Base system + packages ──────────────────────────────────────────────
 
 export DEBIAN_FRONTEND=noninteractive
+
+# Remove any ondrej/php PPA entry left over from a previous run on a
+# codename it doesn't publish for — a stale entry here breaks every
+# apt-get update below, not just the PHP install step.
+rm -f /etc/apt/sources.list.d/ondrej-ubuntu-php-*.list*
+
 apt-get update
 apt-get upgrade -y
 apt-get install -y software-properties-common curl gnupg2 ca-certificates lsb-release unzip git ufw
