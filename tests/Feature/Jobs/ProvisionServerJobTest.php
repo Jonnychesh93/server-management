@@ -39,8 +39,8 @@ test('a failing step marks provisioning as failed and records where', function (
         $calls++;
         $onOutput && $onOutput("output {$calls}\n");
 
-        // Step order: update_packages, create_deploy_user, install_firewall, ...
-        if ($calls === 3) {
+        // Step order: configure_swap, update_packages, create_deploy_user, install_firewall, ...
+        if ($calls === 4) {
             return new SshResult(1, 'ufw: command not found');
         }
 

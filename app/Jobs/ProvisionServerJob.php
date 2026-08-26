@@ -9,6 +9,7 @@ use App\Events\ServerProvisioningOutputReceived;
 use App\Models\ActivityLog;
 use App\Models\Server;
 use App\Services\Provisioning\ProvisioningStep;
+use App\Services\Provisioning\Steps\ConfigureSwap;
 use App\Services\Provisioning\Steps\CreateDeployUser;
 use App\Services\Provisioning\Steps\InstallCertbot;
 use App\Services\Provisioning\Steps\InstallFirewall;
@@ -38,6 +39,7 @@ class ProvisionServerJob implements ShouldQueue
      * @var array<int, class-string<ProvisioningStep>>
      */
     private const STEPS = [
+        ConfigureSwap::class,
         UpdatePackages::class,
         CreateDeployUser::class,
         InstallFirewall::class,
