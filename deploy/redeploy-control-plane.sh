@@ -22,6 +22,11 @@ DEPLOY_KEY_PATH=/root/.ssh/anchor_deploy_key
 
 cd "${DEPLOY_PATH}"
 
+# Files here are owned by www-data (set at the end of every deploy), but
+# this script runs as root — git refuses to touch a repo it doesn't own
+# unless explicitly told it's safe to.
+git config --global --add safe.directory "${DEPLOY_PATH}"
+
 echo "==> Pulling latest code"
 if [[ -f "${DEPLOY_KEY_PATH}" ]]; then
     GIT_SSH_COMMAND="ssh -i ${DEPLOY_KEY_PATH} -o StrictHostKeyChecking=accept-new" git pull
