@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/vue3';
 import { Pencil, Rocket } from '@lucide/vue';
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
 import DeploymentController from '@/actions/App/Http/Controllers/DeploymentController';
 import SiteController from '@/actions/App/Http/Controllers/SiteController';
 import SiteEnvironmentController from '@/actions/App/Http/Controllers/SiteEnvironmentController';
@@ -85,6 +85,29 @@ watch(finished, (isFinished) => {
         router.reload({ only: ['site'] });
     }
 });
+
+const latestDeployment = site.deployments?.[0] ?? null;
+const isDeploying =
+    latestDeployment !== null &&
+    (latestDeployment.status === 'queued' ||
+        latestDeployment.status === 'running');
+
+let deploymentOutput = ref('');
+let deploymentFinished = ref(false);
+
+if (latestDeployment) {
+    ({ output: deploymentOutput, finished: deploymentFinished } =
+        useLiveOutput(
+            `teams.${site.team_id}.deployments.${latestDeployment.id}`,
+            latestDeployment.output,
+        ));
+}
+
+watch(deploymentFinished, (isFinished) => {
+    if (isFinished) {
+        router.reload({ only: ['site'] });
+    }
+});
 </script>
 
 <template>
@@ -156,7 +179,21 @@ watch(finished, (isFinished) => {
                     </CardContent>
                 </Card>
 
-                <Card v-if="site.deployments && site.deployments.length > 0">
+                <Card v-if="isDeploying">
+                    <CardHeader>
+                        <CardTitle>Deploying…</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <pre
+                            class="max-h-96 overflow-auto rounded-md bg-muted p-4 text-xs"
+                            >{{ deploymentOutput }}</pre
+                        >
+                    </CardContent>
+                </Card>
+
+                <Card
+                    v-else-if="site.deployments && site.deployments.length > 0"
+                >
                     <CardHeader>
                         <CardTitle>Recent deployments</CardTitle>
                     </CardHeader>
@@ -189,7 +226,21 @@ watch(finished, (isFinished) => {
             </TabsContent>
 
             <TabsContent value="deployments">
-                <Card v-if="site.deployments && site.deployments.length > 0">
+                <Card v-if="isDeploying">
+                    <CardHeader>
+                        <CardTitle>Deploying…</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <pre
+                            class="max-h-96 overflow-auto rounded-md bg-muted p-4 text-xs"
+                            >{{ deploymentOutput }}</pre
+                        >
+                    </CardContent>
+                </Card>
+
+                <Card
+                    v-else-if="site.deployments && site.deployments.length > 0"
+                >
                     <CardHeader>
                         <CardTitle>Deployments</CardTitle>
                     </CardHeader>
