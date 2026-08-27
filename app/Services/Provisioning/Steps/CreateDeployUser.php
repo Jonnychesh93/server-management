@@ -36,6 +36,11 @@ class CreateDeployUser implements ProvisioningStep
         return <<<BASH
             set -e
             id -u {$user} &>/dev/null || useradd --create-home --shell /bin/bash {$user}
+            # useradd's default home mode blocks traversal by other users —
+            # nginx (running as www-data) needs to reach into sites living
+            # under this home directory. 711 grants traversal without
+            # letting other users list the directory's own contents.
+            chmod 711 /home/{$user}
             mkdir -p /home/{$user}/.ssh
             cp ~/.ssh/authorized_keys /home/{$user}/.ssh/authorized_keys
             chown -R {$user}:{$user} /home/{$user}/.ssh
