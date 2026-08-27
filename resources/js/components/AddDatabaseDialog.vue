@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
+import { ref } from 'vue';
 import DatabaseController from '@/actions/App/Http/Controllers/DatabaseController';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -21,10 +22,12 @@ import type { Server } from '@/types';
 const { server } = defineProps<{
     server: Server;
 }>();
+
+const open = ref(false);
 </script>
 
 <template>
-    <Dialog>
+    <Dialog :open="open" @update:open="open = $event">
         <DialogTrigger as-child>
             <Button variant="outline">
                 <Plus class="mr-2 size-4" />
@@ -35,6 +38,7 @@ const { server } = defineProps<{
             <Form
                 v-bind="DatabaseController.store.form(server.id)"
                 reset-on-success
+                @success="open = false"
                 v-slot="{ errors, processing }"
             >
                 <DialogHeader class="space-y-3">
@@ -51,7 +55,7 @@ const { server } = defineProps<{
                         <Input
                             id="database-name"
                             name="name"
-                            placeholder="budget_buddy"
+                            placeholder="my_app"
                             required
                         />
                         <InputError :message="errors.name" />
@@ -61,7 +65,7 @@ const { server } = defineProps<{
                         <Input
                             id="database-username"
                             name="username"
-                            placeholder="budget_buddy"
+                            placeholder="my_app"
                             required
                         />
                         <InputError :message="errors.username" />
