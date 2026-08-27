@@ -50,7 +50,7 @@ class InstallPhp extends AptStep
             esac
             apt-get update -y
             apt-get install -y php{$version}-fpm php{$version}-cli php{$version}-common \\
-                php{$version}-mysql php{$version}-pgsql php{$version}-xml php{$version}-curl \\
+                php{$version}-mysql php{$version}-pgsql php{$version}-sqlite3 php{$version}-xml php{$version}-curl \\
                 php{$version}-mbstring php{$version}-zip php{$version}-bcmath php{$version}-gd \\
                 php{$version}-redis
             systemctl enable php{$version}-fpm
