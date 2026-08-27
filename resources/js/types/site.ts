@@ -1,4 +1,5 @@
 import type { Deployment } from '@/types/deployment';
+import type { Server } from '@/types/server';
 
 export type SiteStatus = 'provisioning' | 'active' | 'failed' | 'disabled';
 
@@ -40,4 +41,5 @@ export type Site = {
     updated_at: string;
     git_connection?: GitConnection | null;
     deployments?: Deployment[];
+    server?: Server;
 };

@@ -3,10 +3,12 @@
 use App\Enums\TeamRole;
 use App\Jobs\ProvisionSiteJob;
 use App\Models\GitConnection;
+use App\Models\GithubInstallation;
 use App\Models\Server;
 use App\Models\Site;
 use App\Models\SshKey;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Http;
 
 test('an owner can add a site to a server', function () {
     Bus::fake();
@@ -83,6 +85,63 @@ test('adding a repository generates a deploy key and git connection', function (
     $key = SshKey::where('site_id', $site->id)->first();
     expect($key)->not->toBeNull();
     expect($connection->deploy_key_id)->toBe($key->id);
+});
+
+test('the create form lists the team\'s github repositories when connected', function () {
+    config([
+        'services.github.app_id' => '1',
+        'services.github.private_key' => fakeGithubAppPrivateKey(),
+    ]);
+
+    Http::fake([
+        'api.github.com/app/installations/*/access_tokens' => Http::response(['token' => 'installation-token']),
+        'api.github.com/installation/repositories' => Http::response([
+            'repositories' => [
+                ['full_name' => 'acme/example', 'default_branch' => 'main'],
+            ],
+        ]),
+    ]);
+
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    GithubInstallation::factory()->for($team)->create(['installation_id' => 12345]);
+    $server = Server::factory()->for($team)->active()->create();
+
+    $this->actingAs($owner)->get(route('sites.create', $server))
+        ->assertInertia(fn ($page) => $page->where('repositories', [
+            ['full_name' => 'acme/example', 'default_branch' => 'main'],
+        ]));
+});
+
+test('a github repository\'s branches can be fetched for the create form', function () {
+    config([
+        'services.github.app_id' => '1',
+        'services.github.private_key' => fakeGithubAppPrivateKey(),
+    ]);
+
+    Http::fake([
+        'api.github.com/app/installations/*/access_tokens' => Http::response(['token' => 'installation-token']),
+        'api.github.com/repos/acme/example/branches*' => Http::response([
+            ['name' => 'main'],
+            ['name' => 'develop'],
+        ]),
+    ]);
+
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    GithubInstallation::factory()->for($team)->create(['installation_id' => 12345]);
+
+    $this->actingAs($owner)
+        ->get(route('github.repositories.branches', ['owner' => 'acme', 'repo' => 'example']))
+        ->assertOk()
+        ->assertJson(['branches' => ['main', 'develop']]);
+});
+
+test('a member cannot fetch a github repository\'s branches', function () {
+    [$team, $member] = teamWithMember(TeamRole::Member);
+    GithubInstallation::factory()->for($team)->create();
+
+    $this->actingAs($member)
+        ->get(route('github.repositories.branches', ['owner' => 'acme', 'repo' => 'example']))
+        ->assertForbidden();
 });
 
 test('a user cannot view a site belonging to another team', function () {

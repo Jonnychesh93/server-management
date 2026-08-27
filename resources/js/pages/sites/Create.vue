@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, setLayoutProps } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
+import GithubRepositoryController from '@/actions/App/Http/Controllers/GithubRepositoryController';
 import SiteController from '@/actions/App/Http/Controllers/SiteController';
 import Heading from '@/components/Heading.vue';
 import InputError from '@/components/InputError.vue';
@@ -15,13 +16,15 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { show as showServer } from '@/routes/servers';
-import type { GithubInstallation, Server } from '@/types';
+import type { GithubInstallation, GithubRepository, Server } from '@/types';
 
-const { server, phpVersions, githubInstallation } = defineProps<{
-    server: Server;
-    phpVersions: string[];
-    githubInstallation: GithubInstallation | null;
-}>();
+const { server, phpVersions, githubInstallation, repositories } =
+    defineProps<{
+        server: Server;
+        phpVersions: string[];
+        githubInstallation: GithubInstallation | null;
+        repositories: GithubRepository[];
+    }>();
 
 setLayoutProps({
     breadcrumbs: [
@@ -31,6 +34,36 @@ setLayoutProps({
 });
 
 const phpVersion = ref(phpVersions[phpVersions.length - 1] ?? phpVersions[0]);
+
+const selectedRepository = ref('');
+const selectedBranch = ref('');
+const branches = ref<string[]>([]);
+const loadingBranches = ref(false);
+
+watch(selectedRepository, async (fullName) => {
+    branches.value = [];
+    selectedBranch.value = '';
+
+    if (!fullName) {
+        return;
+    }
+
+    const repository = repositories.find((r) => r.full_name === fullName);
+    selectedBranch.value = repository?.default_branch ?? '';
+
+    loadingBranches.value = true;
+
+    try {
+        const [owner, repo] = fullName.split('/');
+        const response = await fetch(
+            GithubRepositoryController.branches.url({ owner, repo }),
+        );
+        const data = await response.json();
+        branches.value = data.branches ?? [];
+    } finally {
+        loadingBranches.value = false;
+    }
+});
 </script>
 
 <template>
@@ -82,17 +115,54 @@ const phpVersion = ref(phpVersions[phpVersions.length - 1] ?? phpVersions[0]);
                     GitHub repository
                     <span class="text-muted-foreground">(optional)</span>
                 </Label>
-                <Input
-                    id="github_repository"
+                <Select
+                    v-model="selectedRepository"
                     name="github_repository"
-                    placeholder="acme/example"
-                />
+                >
+                    <SelectTrigger id="github_repository" class="w-full">
+                        <SelectValue placeholder="Select a repository" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem
+                            v-for="repository in repositories"
+                            :key="repository.full_name"
+                            :value="repository.full_name"
+                        >
+                            {{ repository.full_name }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
                 <p class="text-sm text-muted-foreground">
                     Any repository {{ githubInstallation.account_login }} has
                     granted this app access to. Deploys automatically on push,
                     no deploy key needed.
                 </p>
                 <InputError :message="errors.github_repository" />
+            </div>
+
+            <div v-if="selectedRepository" class="grid gap-2">
+                <Label for="branch">Branch</Label>
+                <Select v-model="selectedBranch" name="branch">
+                    <SelectTrigger id="branch" class="w-full">
+                        <SelectValue
+                            :placeholder="
+                                loadingBranches
+                                    ? 'Loading branches…'
+                                    : 'Select a branch'
+                            "
+                        />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem
+                            v-for="branch in branches"
+                            :key="branch"
+                            :value="branch"
+                        >
+                            {{ branch }}
+                        </SelectItem>
+                    </SelectContent>
+                </Select>
+                <InputError :message="errors.branch" />
             </div>
 
             <div class="grid gap-2">
@@ -116,7 +186,7 @@ const phpVersion = ref(phpVersions[phpVersions.length - 1] ?? phpVersions[0]);
                 <InputError :message="errors.repository" />
             </div>
 
-            <div class="grid gap-2">
+            <div v-if="!selectedRepository" class="grid gap-2">
                 <Label for="branch">Branch</Label>
                 <Input id="branch" name="branch" placeholder="main" />
                 <InputError :message="errors.branch" />

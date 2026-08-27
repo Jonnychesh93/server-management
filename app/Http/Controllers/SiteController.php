@@ -11,6 +11,7 @@ use App\Jobs\ProvisionSiteJob;
 use App\Models\ActivityLog;
 use App\Models\Server;
 use App\Models\Site;
+use App\Services\GitHub\GitHubAppClient;
 use App\Services\Provisioning\Steps\InstallPhp;
 use App\Services\Ssh\KeyPairGenerator;
 use Illuminate\Http\RedirectResponse;
@@ -30,10 +31,15 @@ class SiteController extends Controller
     {
         Gate::authorize('create', Site::class);
 
+        $installation = $server->team->githubInstallation;
+
         return Inertia::render('sites/Create', [
             'server' => $server,
             'phpVersions' => InstallPhp::SUPPORTED_VERSIONS,
-            'githubInstallation' => $server->team->githubInstallation,
+            'githubInstallation' => $installation,
+            'repositories' => $installation
+                ? app(GitHubAppClient::class)->installationRepositories($installation->installation_id)
+                : [],
         ]);
     }
 
@@ -107,7 +113,7 @@ class SiteController extends Controller
         Gate::authorize('view', $site);
 
         $canManageEnvironment = $request->user()->canManage($site->team);
-        $site->load(['gitConnection.deployKey', 'deployments' => fn ($query) => $query->limit(10)]);
+        $site->load(['server', 'gitConnection.deployKey', 'deployments' => fn ($query) => $query->limit(10)]);
 
         $isManualConnection = $site->gitConnection?->provider === GitProvider::Manual;
 

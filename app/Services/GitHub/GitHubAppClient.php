@@ -56,15 +56,32 @@ class GitHubAppClient
      */
     public function installationRepositories(int $installationId): array
     {
+        return Cache::remember("github.installation_repositories.{$installationId}", now()->addMinutes(2), function () use ($installationId) {
+            $response = Http::withToken($this->installationToken($installationId))
+                ->withHeaders(['Accept' => 'application/vnd.github+json'])
+                ->get(self::API_BASE.'/installation/repositories')
+                ->throw();
+
+            return array_map(
+                fn (array $repo) => ['full_name' => $repo['full_name'], 'default_branch' => $repo['default_branch']],
+                $response->json('repositories', []),
+            );
+        });
+    }
+
+    /**
+     * List a repository's branches.
+     *
+     * @return array<int, string>
+     */
+    public function repositoryBranches(int $installationId, string $repository): array
+    {
         $response = Http::withToken($this->installationToken($installationId))
             ->withHeaders(['Accept' => 'application/vnd.github+json'])
-            ->get(self::API_BASE.'/installation/repositories')
+            ->get(self::API_BASE."/repos/{$repository}/branches", ['per_page' => 100])
             ->throw();
 
-        return array_map(
-            fn (array $repo) => ['full_name' => $repo['full_name'], 'default_branch' => $repo['default_branch']],
-            $response->json('repositories', []),
-        );
+        return array_map(fn (array $branch) => $branch['name'], $response->json());
     }
 
     /**

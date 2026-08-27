@@ -10,6 +10,11 @@ export type GithubInstallation = {
     account_type: string;
 };
 
+export type GithubRepository = {
+    full_name: string;
+    default_branch: string;
+};
+
 export type Team = {
     id: number;
     name: string;
