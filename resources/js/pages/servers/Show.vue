@@ -5,6 +5,7 @@ import { watch } from 'vue';
 import ServerController from '@/actions/App/Http/Controllers/ServerController';
 import AddCronDialog from '@/components/AddCronDialog.vue';
 import AddDaemonDialog from '@/components/AddDaemonDialog.vue';
+import AddDatabaseDialog from '@/components/AddDatabaseDialog.vue';
 import DeleteServerDialog from '@/components/DeleteServerDialog.vue';
 import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
@@ -14,23 +15,26 @@ import { useLiveOutput } from '@/composables/useLiveOutput';
 import { capitalize } from '@/lib/utils';
 import { destroy as destroyCron } from '@/routes/crons';
 import { destroy as destroyDaemon } from '@/routes/daemons';
+import { destroy as destroyDatabase } from '@/routes/databases';
 import { edit as editServer, index as serversIndex } from '@/routes/servers';
 import { create as createSite, show as showSite } from '@/routes/sites';
 import type {
     ConnectionStatus,
     Cron,
     Daemon,
+    Database,
     ProvisioningStatus,
     Server,
     Site,
     SiteStatus,
 } from '@/types';
 
-const { server, sites, daemons, crons } = defineProps<{
+const { server, sites, daemons, crons, databases } = defineProps<{
     server: Server;
     sites: Site[];
     daemons: Daemon[];
     crons: Cron[];
+    databases: Database[];
 }>();
 
 const siteStatusVariant: Record<
@@ -203,6 +207,63 @@ watch(finished, (isFinished) => {
                         </CardContent>
                     </Card>
                 </Link>
+            </div>
+        </div>
+
+        <div
+            v-if="server.provisioning_status === 'active'"
+            class="flex flex-col space-y-4"
+        >
+            <div class="flex items-center justify-between">
+                <Heading variant="small" title="Databases" />
+                <AddDatabaseDialog :server="server" />
+            </div>
+
+            <p
+                v-if="databases.length === 0"
+                class="text-sm text-muted-foreground"
+            >
+                No databases yet.
+            </p>
+
+            <div v-else class="space-y-2">
+                <div
+                    v-for="database in databases"
+                    :key="database.id"
+                    class="flex items-center justify-between rounded-md border p-3"
+                >
+                    <div>
+                        <p class="font-mono text-sm">{{ database.name }}</p>
+                        <p class="text-xs text-muted-foreground">
+                            {{ database.username }}
+                            <template v-if="database.password">
+                                &middot; {{ database.password }}
+                            </template>
+                        </p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <Badge
+                            :variant="
+                                database.status === 'active'
+                                    ? 'default'
+                                    : database.status === 'failed'
+                                      ? 'destructive'
+                                      : 'outline'
+                            "
+                        >
+                            {{ capitalize(database.status) }}
+                        </Badge>
+                        <Link
+                            :href="destroyDatabase(database.id)"
+                            method="delete"
+                            as="button"
+                        >
+                            <Trash2
+                                class="size-4 text-muted-foreground hover:text-destructive"
+                            />
+                        </Link>
+                    </div>
+                </div>
             </div>
         </div>
 

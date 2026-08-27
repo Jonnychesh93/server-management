@@ -19,7 +19,7 @@ class GithubRepositoryController extends Controller
 
         $installation = $request->user()->currentTeam->githubInstallation;
 
-        abort_unless($installation, 404);
+        abort_unless($installation !== null, 404);
 
         $branches = app(GitHubAppClient::class)->repositoryBranches($installation->installation_id, "{$owner}/{$repo}");
 

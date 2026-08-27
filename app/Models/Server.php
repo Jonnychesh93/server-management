@@ -97,4 +97,14 @@ class Server extends Model
     {
         return $this->hasMany(Cron::class);
     }
+
+    /**
+     * Get the MySQL databases created on this server.
+     *
+     * @return HasMany<Database, $this>
+     */
+    public function databases(): HasMany
+    {
+        return $this->hasMany(Database::class);
+    }
 }

@@ -9,6 +9,7 @@ use App\Http\Requests\Servers\StoreServerRequest;
 use App\Http\Requests\Servers\UpdateServerRequest;
 use App\Jobs\ProvisionServerJob;
 use App\Models\ActivityLog;
+use App\Models\Database;
 use App\Models\Server;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -92,15 +93,22 @@ class ServerController extends Controller
     /**
      * Show a server's details.
      */
-    public function show(Server $server): Response
+    public function show(Request $request, Server $server): Response
     {
         Gate::authorize('view', $server);
+
+        $canManage = $request->user()->canManage($server->team);
 
         return Inertia::render('servers/Show', [
             'server' => $server,
             'sites' => $server->sites()->orderBy('domain')->get(),
             'daemons' => $server->daemons()->orderBy('command')->get(),
             'crons' => $server->crons()->orderBy('command')->get(),
+            'databases' => $server->databases()->orderBy('name')->get()
+                ->map(fn (Database $database) => [
+                    ...$database->toArray(),
+                    'password' => $canManage ? $database->password : null,
+                ]),
         ]);
     }
 

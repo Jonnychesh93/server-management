@@ -1,5 +1,6 @@
 export * from './activity';
 export * from './auth';
+export * from './database';
 export * from './deployment';
 export * from './navigation';
 export * from './server';
