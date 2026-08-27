@@ -53,8 +53,18 @@ class InstallPhp extends AptStep
                 php{$version}-mysql php{$version}-pgsql php{$version}-sqlite3 php{$version}-xml php{$version}-curl \\
                 php{$version}-mbstring php{$version}-zip php{$version}-bcmath php{$version}-gd \\
                 php{$version}-redis
+            # Run the pool as appuser (the same user site files are owned
+            # by) instead of the default www-data, so a site's own PHP
+            # process can write to its storage/ and bootstrap/cache/
+            # without cross-user permission games. nginx still connects to
+            # the socket via group membership (it runs as www-data).
+            sed -i 's/^user = .*/user = appuser/' /etc/php/{$version}/fpm/pool.d/www.conf
+            sed -i 's/^group = .*/group = appuser/' /etc/php/{$version}/fpm/pool.d/www.conf
+            sed -i 's/^listen.owner = .*/listen.owner = appuser/' /etc/php/{$version}/fpm/pool.d/www.conf
+            sed -i 's/^listen.group = .*/listen.group = www-data/' /etc/php/{$version}/fpm/pool.d/www.conf
+            sed -i 's/^;\?listen.mode = .*/listen.mode = 0660/' /etc/php/{$version}/fpm/pool.d/www.conf
             systemctl enable php{$version}-fpm
-            systemctl start php{$version}-fpm
+            systemctl restart php{$version}-fpm
             BASH;
     }
 }
