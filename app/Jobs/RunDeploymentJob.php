@@ -163,6 +163,7 @@ class RunDeploymentJob implements ShouldQueue
         // script's own "php ..." calls and composer (which itself invokes
         // "env php") resolve consistently to it.
         return <<<BASH
+            set -e
             mkdir -p {$releasePath}/.bin
             ln -sf /usr/bin/php{$phpVersion} {$releasePath}/.bin/php
             export PATH="{$releasePath}/.bin:/usr/local/bin:\$PATH"

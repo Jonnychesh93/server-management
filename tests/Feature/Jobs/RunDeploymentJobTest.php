@@ -207,3 +207,23 @@ test('a failing deploy script marks the deployment failed at that step', functio
     expect($deployment->status)->toBe(DeploymentStatus::Failed);
     expect($deployment->failed_step)->toBe('run_deploy_script');
 });
+
+test('the deploy script actually halts on a failing custom command instead of masking it', function () {
+    $server = Server::factory()->active()->create();
+    $releasePath = sys_get_temp_dir().'/anchor-deploy-script-test-'.uniqid();
+    $site = Site::factory()->for($server->team)->for($server)->active()->create([
+        'deploy_script' => "false\necho 'this must not print'",
+    ]);
+
+    $method = (new ReflectionClass(RunDeploymentJob::class))->getMethod('deployScript');
+    $method->setAccessible(true);
+    $job = (new ReflectionClass(RunDeploymentJob::class))->newInstanceWithoutConstructor();
+    $script = $method->invoke($job, $releasePath, $site);
+
+    exec('bash -c '.escapeshellarg($script).' 2>&1', $output, $exitCode);
+
+    expect($exitCode)->not->toBe(0);
+    expect(implode("\n", $output))->not->toContain('this must not print');
+
+    exec('rm -rf '.escapeshellarg($releasePath));
+});

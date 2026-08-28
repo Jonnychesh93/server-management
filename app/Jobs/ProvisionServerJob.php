@@ -16,6 +16,7 @@ use App\Services\Provisioning\Steps\InstallComposer;
 use App\Services\Provisioning\Steps\InstallFirewall;
 use App\Services\Provisioning\Steps\InstallMysql;
 use App\Services\Provisioning\Steps\InstallNginx;
+use App\Services\Provisioning\Steps\InstallNode;
 use App\Services\Provisioning\Steps\InstallPhp;
 use App\Services\Provisioning\Steps\InstallRedis;
 use App\Services\Provisioning\Steps\InstallSupervisor;
@@ -47,6 +48,7 @@ class ProvisionServerJob implements ShouldQueue
         InstallNginx::class,
         InstallPhp::class,
         InstallComposer::class,
+        InstallNode::class,
         InstallMysql::class,
         InstallRedis::class,
         InstallSupervisor::class,
