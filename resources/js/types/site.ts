@@ -1,3 +1,4 @@
+import type { Command } from '@/types/command';
 import type { Deployment } from '@/types/deployment';
 import type { Server } from '@/types/server';
 
@@ -42,5 +43,6 @@ export type Site = {
     updated_at: string;
     git_connection?: GitConnection | null;
     deployments?: Deployment[];
+    commands?: Command[];
     server?: Server;
 };

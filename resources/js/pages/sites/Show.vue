@@ -2,6 +2,7 @@
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/vue3';
 import { Pencil, Rocket } from '@lucide/vue';
 import { ref, watch } from 'vue';
+import CommandController from '@/actions/App/Http/Controllers/CommandController';
 import DeploymentController from '@/actions/App/Http/Controllers/DeploymentController';
 import SiteController from '@/actions/App/Http/Controllers/SiteController';
 import SiteEnvironmentController from '@/actions/App/Http/Controllers/SiteEnvironmentController';
@@ -22,10 +23,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useLiveOutput } from '@/composables/useLiveOutput';
 import { capitalize } from '@/lib/utils';
+import { show as showCommand } from '@/routes/commands';
 import { show as showDeployment } from '@/routes/deployments';
 import { index as serversIndex, show as showServer } from '@/routes/servers';
 import { edit as editSite } from '@/routes/sites';
-import type { DeploymentStatus, Site, SiteStatus, SslStatus } from '@/types';
+import type {
+    CommandStatus,
+    DeploymentStatus,
+    Site,
+    SiteStatus,
+    SslStatus,
+} from '@/types';
 
 const { site, canManageEnvironment, env, webhookUrl, webhookSecret } =
     defineProps<{
@@ -68,6 +76,16 @@ const sslVariant: Record<
 
 const deploymentVariant: Record<
     DeploymentStatus,
+    'default' | 'secondary' | 'destructive' | 'outline'
+> = {
+    queued: 'outline',
+    running: 'secondary',
+    success: 'default',
+    failed: 'destructive',
+};
+
+const commandVariant: Record<
+    CommandStatus,
     'default' | 'secondary' | 'destructive' | 'outline'
 > = {
     queued: 'outline',
@@ -155,6 +173,7 @@ watch(deploymentFinished, (isFinished) => {
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="deployments">Deployments</TabsTrigger>
                 <TabsTrigger value="domain">Domain</TabsTrigger>
+                <TabsTrigger value="commands">Commands</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
 
@@ -345,6 +364,61 @@ Secret: {{ webhookSecret }}</pre
                         </Form>
                     </CardContent>
                 </Card>
+            </TabsContent>
+
+            <TabsContent value="commands" class="space-y-6">
+                <Card v-if="site.status === 'active'">
+                    <CardHeader>
+                        <CardTitle>Run a command</CardTitle>
+                        <CardDescription
+                            >Runs from this site's current release
+                            directory</CardDescription
+                        >
+                    </CardHeader>
+                    <CardContent>
+                        <Form
+                            v-bind="CommandController.store.form(site.uuid)"
+                            class="space-y-4"
+                            v-slot="{ processing }"
+                        >
+                            <Textarea
+                                name="command"
+                                rows="3"
+                                class="font-mono text-xs"
+                                placeholder="php artisan queue:restart"
+                            />
+                            <Button :disabled="processing">Run</Button>
+                        </Form>
+                    </CardContent>
+                </Card>
+
+                <Card v-if="site.commands && site.commands.length > 0">
+                    <CardHeader>
+                        <CardTitle>Command history</CardTitle>
+                    </CardHeader>
+                    <CardContent class="space-y-2">
+                        <Link
+                            v-for="entry in site.commands"
+                            :key="entry.id"
+                            :href="showCommand(entry.uuid)"
+                            class="flex items-center justify-between rounded-md p-2 text-sm hover:bg-muted"
+                        >
+                            <span class="flex items-center gap-2">
+                                <Badge
+                                    :variant="commandVariant[entry.status]"
+                                >
+                                    {{ capitalize(entry.status) }}
+                                </Badge>
+                                <span class="font-mono text-xs">{{
+                                    entry.command
+                                }}</span>
+                            </span>
+                        </Link>
+                    </CardContent>
+                </Card>
+                <p v-else class="text-sm text-muted-foreground">
+                    No commands run yet.
+                </p>
             </TabsContent>
 
             <TabsContent value="settings">

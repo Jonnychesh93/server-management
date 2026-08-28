@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Command;
 use App\Models\Deployment;
 use App\Models\Server;
 use App\Models\Site;
@@ -28,4 +29,8 @@ Broadcast::channel('teams.{team}.sites.{site}.provisioning', function (User $use
 
 Broadcast::channel('teams.{team}.deployments.{deployment}', function (User $user, Team $team, int $deployment) {
     return $user->belongsToTeam($team) && Deployment::where('id', $deployment)->where('team_id', $team->id)->exists();
+});
+
+Broadcast::channel('teams.{team}.commands.{command}', function (User $user, Team $team, int $command) {
+    return $user->belongsToTeam($team) && Command::where('id', $command)->where('team_id', $team->id)->exists();
 });

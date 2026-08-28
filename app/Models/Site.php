@@ -178,4 +178,14 @@ class Site extends Model
     {
         return "/home/{$this->server->ssh_user}/{$this->domain}";
     }
+
+    /**
+     * Get this site's ad-hoc command history, most recent first.
+     *
+     * @return HasMany<Command, $this>
+     */
+    public function commands(): HasMany
+    {
+        return $this->hasMany(Command::class)->latest();
+    }
 }

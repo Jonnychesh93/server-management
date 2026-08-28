@@ -113,7 +113,12 @@ class SiteController extends Controller
         Gate::authorize('view', $site);
 
         $canManageEnvironment = $request->user()->canManage($site->team);
-        $site->load(['server', 'gitConnection.deployKey', 'deployments' => fn ($query) => $query->limit(10)]);
+        $site->load([
+            'server',
+            'gitConnection.deployKey',
+            'deployments' => fn ($query) => $query->limit(10),
+            'commands' => fn ($query) => $query->limit(10),
+        ]);
 
         $isManualConnection = $site->gitConnection?->provider === GitProvider::Manual;
 
