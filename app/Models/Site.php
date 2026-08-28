@@ -82,12 +82,12 @@ class Site extends Model
 
         DB_CONNECTION=sqlite
 
-        SESSION_DRIVER=database
+        SESSION_DRIVER=file
         SESSION_LIFETIME=120
 
-        CACHE_STORE=database
+        CACHE_STORE=file
 
-        QUEUE_CONNECTION=database
+        QUEUE_CONNECTION=sync
 
         MAIL_MAILER=log
         ENV;
