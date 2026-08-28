@@ -10,6 +10,7 @@ use App\Models\Site;
 use App\Services\Git\GitConnectionProvider;
 use App\Services\Git\GitConnectionProviderFactory;
 use App\Services\Ssh\OutputRelay;
+use App\Services\Ssh\SshConnection;
 use App\Services\Ssh\SshConnector;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -79,6 +80,10 @@ class RunDeploymentJob implements ShouldQueue
             }
 
             $this->captureCommit($result->output);
+
+            if (! $site->env_encrypted) {
+                $this->seedEnvironment($connection, $site, $releasePath, $relay);
+            }
 
             $relay(">>> running deploy script\n");
             $result = $connection->run($this->deployScript($releasePath, $site), $relay);
@@ -163,6 +168,24 @@ class RunDeploymentJob implements ShouldQueue
             ln -sfn {$releasePath} {$siteRoot}/current
             cd {$siteRoot}/releases && ls -1dt */ | tail -n +6 | xargs -r rm -rf
             BASH;
+    }
+
+    /**
+     * Seed the site's .env on its first deploy — from the repository's own
+     * .env.example if it has one, otherwise a generic Laravel default —
+     * rather than leaving it permanently blank until someone fills it in
+     * by hand.
+     */
+    private function seedEnvironment(SshConnection $connection, Site $site, string $releasePath, OutputRelay $relay): void
+    {
+        $example = $connection->sftp()->get("{$releasePath}/.env.example");
+        $fromRepository = is_string($example) && trim($example) !== '';
+        $env = $fromRepository ? $example : Site::DEFAULT_ENV_TEMPLATE;
+
+        $site->forceFill(['env_encrypted' => $env])->save();
+        $connection->writeFile($site->remotePath().'/shared/.env', $env, 0600);
+
+        $relay('>>> seeded .env from '.($fromRepository ? "the repository's .env.example\n" : "the default template\n"));
     }
 
     /**

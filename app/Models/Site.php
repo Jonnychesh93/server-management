@@ -58,6 +58,41 @@ class Site extends Model
         BASH;
 
     /**
+     * Seeded into a site's .env on its first successful deployment, if the
+     * repository has no .env.example of its own to use instead.
+     */
+    public const DEFAULT_ENV_TEMPLATE = <<<'ENV'
+        APP_NAME=Laravel
+        APP_ENV=production
+        APP_KEY=
+        APP_DEBUG=false
+        APP_URL=http://localhost
+
+        APP_LOCALE=en
+        APP_FALLBACK_LOCALE=en
+        APP_FAKER_LOCALE=en_US
+
+        APP_MAINTENANCE_DRIVER=file
+
+        BCRYPT_ROUNDS=12
+
+        LOG_CHANNEL=stack
+        LOG_STACK=single
+        LOG_LEVEL=debug
+
+        DB_CONNECTION=sqlite
+
+        SESSION_DRIVER=database
+        SESSION_LIFETIME=120
+
+        CACHE_STORE=database
+
+        QUEUE_CONNECTION=database
+
+        MAIL_MAILER=log
+        ENV;
+
+    /**
      * Get the attributes that should be cast.
      *
      * @return array<string, string>
