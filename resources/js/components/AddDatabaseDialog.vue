@@ -36,7 +36,7 @@ const open = ref(false);
         </DialogTrigger>
         <DialogContent>
             <Form
-                v-bind="DatabaseController.store.form(server.id)"
+                v-bind="DatabaseController.store.form(server.uuid)"
                 reset-on-success
                 @success="open = false"
                 v-slot="{ errors, processing }"

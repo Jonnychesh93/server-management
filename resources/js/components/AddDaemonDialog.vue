@@ -33,7 +33,7 @@ const { server } = defineProps<{
         </DialogTrigger>
         <DialogContent>
             <Form
-                v-bind="DaemonController.store.form(server.id)"
+                v-bind="DaemonController.store.form(server.uuid)"
                 reset-on-success
                 v-slot="{ errors, processing }"
             >

@@ -16,7 +16,7 @@ const { server } = defineProps<{
 setLayoutProps({
     breadcrumbs: [
         { title: 'Servers', href: serversIndex() },
-        { title: server.name, href: showServer(server.id) },
+        { title: server.name, href: showServer(server.uuid) },
         { title: 'Edit', href: '' },
     ],
 });
@@ -32,7 +32,7 @@ setLayoutProps({
         />
 
         <Form
-            v-bind="ServerController.update.form(server.id)"
+            v-bind="ServerController.update.form(server.uuid)"
             class="max-w-xl space-y-6"
             v-slot="{ errors, processing }"
         >

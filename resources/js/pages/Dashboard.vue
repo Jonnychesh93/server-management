@@ -284,7 +284,7 @@ function timeAgo(date: string): string {
                         <Link
                             v-for="server in recentServers"
                             :key="server.id"
-                            :href="showServer(server.id)"
+                            :href="showServer(server.uuid)"
                             class="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-muted"
                         >
                             <span class="font-medium">{{ server.name }}</span>

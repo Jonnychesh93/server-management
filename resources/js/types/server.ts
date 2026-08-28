@@ -9,6 +9,7 @@ export type BootstrapCredentialType = 'password' | 'private_key';
 
 export type Server = {
     id: number;
+    uuid: string;
     team_id: number;
     name: string;
     ip_address: string;

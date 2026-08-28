@@ -72,7 +72,7 @@ const connectionLabel: Record<ConnectionStatus, string> = {
             <Link
                 v-for="server in servers"
                 :key="server.id"
-                :href="showServer(server.id)"
+                :href="showServer(server.uuid)"
             >
                 <Card class="transition-colors hover:bg-muted/50">
                     <CardHeader>

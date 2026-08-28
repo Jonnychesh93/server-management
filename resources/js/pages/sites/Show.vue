@@ -39,7 +39,7 @@ setLayoutProps({
     breadcrumbs: site.server
         ? [
               { title: 'Servers', href: serversIndex() },
-              { title: site.server.name, href: showServer(site.server.id) },
+              { title: site.server.name, href: showServer(site.server.uuid) },
               { title: site.domain, href: '' },
           ]
         : [{ title: site.domain, href: '' }],

@@ -28,7 +28,7 @@ const { server, phpVersions, githubInstallation, repositories } =
 
 setLayoutProps({
     breadcrumbs: [
-        { title: server.name, href: showServer(server.id) },
+        { title: server.name, href: showServer(server.uuid) },
         { title: 'Add site', href: '' },
     ],
 });
@@ -76,7 +76,7 @@ watch(selectedRepository, async (fullName) => {
         />
 
         <Form
-            v-bind="SiteController.store.form(server.id)"
+            v-bind="SiteController.store.form(server.uuid)"
             class="max-w-xl space-y-6"
             v-slot="{ errors, processing }"
         >

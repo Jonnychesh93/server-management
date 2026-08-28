@@ -102,7 +102,7 @@ watch(finished, (isFinished) => {
             />
             <div class="flex items-center gap-2">
                 <Button variant="outline" as-child>
-                    <Link :href="editServer(server.id)">
+                    <Link :href="editServer(server.uuid)">
                         <Pencil class="mr-2 size-4" />
                         Edit
                     </Link>
@@ -155,7 +155,7 @@ watch(finished, (isFinished) => {
 
         <Form
             v-if="server.provisioning_status === 'failed'"
-            v-bind="ServerController.retry.form(server.id)"
+            v-bind="ServerController.retry.form(server.uuid)"
             v-slot="{ processing }"
         >
             <Button type="submit" :disabled="processing">
@@ -181,7 +181,7 @@ watch(finished, (isFinished) => {
             <div class="flex items-center justify-between">
                 <Heading variant="small" title="Sites" />
                 <Button variant="outline" as-child>
-                    <Link :href="createSite(server.id)">
+                    <Link :href="createSite(server.uuid)">
                         <Plus class="mr-2 size-4" />
                         Add site
                     </Link>

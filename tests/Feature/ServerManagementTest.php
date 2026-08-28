@@ -50,6 +50,19 @@ test('a member cannot add a server to the team', function () {
     ])->assertForbidden();
 });
 
+test('a server is routed to by its uuid, not its sequential id', function () {
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->create();
+
+    $url = route('servers.show', $server);
+
+    expect($url)->toEndWith('/servers/'.$server->uuid);
+    expect($url)->not->toEndWith('/servers/'.$server->id);
+
+    $this->actingAs($owner)->get($url)->assertOk();
+    $this->actingAs($owner)->get('/servers/'.$server->id)->assertNotFound();
+});
+
 test('a user cannot view a server belonging to another team', function () {
     $server = Server::factory()->create();
     $outsider = User::factory()->create(['current_team_id' => Team::factory()->create()->id]);

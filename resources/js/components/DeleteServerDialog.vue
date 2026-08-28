@@ -30,7 +30,7 @@ const { server } = defineProps<{
         </DialogTrigger>
         <DialogContent>
             <Form
-                v-bind="ServerController.destroy.form(server.id)"
+                v-bind="ServerController.destroy.form(server.uuid)"
                 v-slot="{ processing }"
             >
                 <DialogHeader class="space-y-3">
