@@ -17,6 +17,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { useLiveOutput } from '@/composables/useLiveOutput';
@@ -122,9 +123,10 @@ watch(deploymentFinished, (isFinished) => {
                     v-bind="DeploymentController.store.form(site.id)"
                     v-slot="{ processing }"
                 >
-                    <Button :disabled="processing">
-                        <Rocket class="mr-2 size-4" />
-                        Deploy now
+                    <Button :disabled="isDeploying || processing">
+                        <Spinner v-if="isDeploying || processing" class="mr-2 size-4" />
+                        <Rocket v-else class="mr-2 size-4" />
+                        {{ isDeploying ? 'Deploying…' : 'Deploy now' }}
                     </Button>
                 </Form>
                 <Button variant="outline" as-child>
