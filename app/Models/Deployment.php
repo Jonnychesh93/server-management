@@ -8,6 +8,7 @@ use App\Enums\DeploymentStatus;
 use App\Enums\DeploymentTriggerType;
 use Database\Factories\DeploymentFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,6 +16,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property string $uuid
  * @property int $team_id
  * @property int $site_id
  * @property DeploymentStatus $status
@@ -33,10 +35,31 @@ use Illuminate\Support\Carbon;
 #[Fillable(['team_id', 'site_id', 'status', 'triggered_by_type', 'triggered_by_user_id'])]
 class Deployment extends Model
 {
-    use BelongsToTeam, HasStreamedOutput;
+    use BelongsToTeam, HasStreamedOutput, HasUuids;
 
     /** @use HasFactory<DeploymentFactory> */
     use HasFactory;
+
+    /**
+     * Only generate a UUID for the "uuid" column — "id" stays the normal
+     * auto-increment primary key everything else's foreign keys reference.
+     *
+     * @return array<int, string>
+     */
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
+    }
+
+    /**
+     * Use the UUID (not the sequential id) for route binding, so a
+     * deployment's URLs don't leak how many deployments exist or let one
+     * be guessed from another.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     /**
      * Get the attributes that should be cast.

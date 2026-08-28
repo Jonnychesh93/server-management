@@ -315,7 +315,7 @@ function timeAgo(date: string): string {
                         <Link
                             v-for="deploy in recentDeployments"
                             :key="deploy.id"
-                            :href="showDeployment(deploy.id)"
+                            :href="showDeployment(deploy.uuid)"
                             class="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-muted"
                         >
                             <span>{{ deploy.site?.domain }}</span>

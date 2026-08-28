@@ -25,6 +25,21 @@ test('a member can trigger a deployment', function () {
     Bus::assertDispatched(RunDeploymentJob::class, fn ($job) => $job->deployment->is($deployment));
 });
 
+test('a deployment is routed to by its uuid, not its sequential id', function () {
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+    $site = Site::factory()->for($team)->for($server)->active()->create();
+    $deployment = Deployment::factory()->for($team)->for($site)->create();
+
+    $url = route('deployments.show', $deployment);
+
+    expect($url)->toEndWith('/deployments/'.$deployment->uuid);
+    expect($url)->not->toEndWith('/deployments/'.$deployment->id);
+
+    $this->actingAs($owner)->get($url)->assertOk();
+    $this->actingAs($owner)->get('/deployments/'.$deployment->id)->assertNotFound();
+});
+
 test('a user outside the team cannot trigger a deployment', function () {
     [, $outsider] = teamWithMember(TeamRole::Owner);
     $site = Site::factory()->active()->create();

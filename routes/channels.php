@@ -20,10 +20,12 @@ Broadcast::channel('teams.{team}.servers.{server}.provisioning', function (User 
     return $user->belongsToTeam($team) && Server::where('id', $server)->where('team_id', $team->id)->exists();
 });
 
-Broadcast::channel('teams.{team}.sites.{site}.provisioning', function (User $user, Team $team, Site $site) {
-    return $user->belongsToTeam($team) && $site->team_id === $team->id;
+// $site/$deployment below are deliberately raw ids, not implicitly-bound
+// models — same reasoning as the server channel above.
+Broadcast::channel('teams.{team}.sites.{site}.provisioning', function (User $user, Team $team, int $site) {
+    return $user->belongsToTeam($team) && Site::where('id', $site)->where('team_id', $team->id)->exists();
 });
 
-Broadcast::channel('teams.{team}.deployments.{deployment}', function (User $user, Team $team, Deployment $deployment) {
-    return $user->belongsToTeam($team) && $deployment->team_id === $team->id;
+Broadcast::channel('teams.{team}.deployments.{deployment}', function (User $user, Team $team, int $deployment) {
+    return $user->belongsToTeam($team) && Deployment::where('id', $deployment)->where('team_id', $team->id)->exists();
 });

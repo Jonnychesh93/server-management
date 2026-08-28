@@ -144,6 +144,20 @@ test('a member cannot fetch a github repository\'s branches', function () {
         ->assertForbidden();
 });
 
+test('a site is routed to by its uuid, not its sequential id', function () {
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+    $site = Site::factory()->for($team)->for($server)->active()->create();
+
+    $url = route('sites.show', $site);
+
+    expect($url)->toEndWith('/sites/'.$site->uuid);
+    expect($url)->not->toEndWith('/sites/'.$site->id);
+
+    $this->actingAs($owner)->get($url)->assertOk();
+    $this->actingAs($owner)->get('/sites/'.$site->id)->assertNotFound();
+});
+
 test('a user cannot view a site belonging to another team', function () {
     [, $outsider] = teamWithMember(TeamRole::Owner);
     $site = Site::factory()->create();

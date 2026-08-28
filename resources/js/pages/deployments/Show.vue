@@ -17,7 +17,7 @@ setLayoutProps({
     breadcrumbs: [
         {
             title: deployment.site?.domain ?? 'Site',
-            href: deployment.site ? showSite(deployment.site.id) : '',
+            href: deployment.site ? showSite(deployment.site.uuid) : '',
         },
         { title: `Deployment #${deployment.id}`, href: '' },
     ],

@@ -9,6 +9,7 @@ use App\Enums\SslStatus;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
+ * @property string $uuid
  * @property int $team_id
  * @property int $server_id
  * @property string $domain
@@ -39,10 +41,31 @@ use Illuminate\Support\Carbon;
 #[Hidden(['env_encrypted'])]
 class Site extends Model
 {
-    use BelongsToTeam, HasStreamedOutput;
+    use BelongsToTeam, HasStreamedOutput, HasUuids;
 
     /** @use HasFactory<SiteFactory> */
     use HasFactory;
+
+    /**
+     * Only generate a UUID for the "uuid" column — "id" stays the normal
+     * auto-increment primary key everything else's foreign keys reference.
+     *
+     * @return array<int, string>
+     */
+    public function uniqueIds(): array
+    {
+        return ['uuid'];
+    }
+
+    /**
+     * Use the UUID (not the sequential id) for route binding, so a site's
+     * URLs don't leak how many sites exist or let one be guessed from
+     * another.
+     */
+    public function getRouteKeyName(): string
+    {
+        return 'uuid';
+    }
 
     /**
      * A sensible starting deploy script, seeded for every new site. Runs

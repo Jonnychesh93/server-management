@@ -4,6 +4,7 @@ export type DeploymentTriggerType = 'user' | 'webhook';
 
 export type Deployment = {
     id: number;
+    uuid: string;
     team_id: number;
     site_id: number;
     status: DeploymentStatus;
@@ -18,7 +19,7 @@ export type Deployment = {
     finished_at: string | null;
     created_at: string;
     triggered_by_user?: { id: number; name: string } | null;
-    site?: { id: number; domain: string };
+    site?: { id: number; uuid: string; domain: string };
 };
 
 export type DaemonStatus = 'pending' | 'active' | 'failed';

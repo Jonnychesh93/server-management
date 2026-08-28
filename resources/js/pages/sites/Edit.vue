@@ -14,7 +14,7 @@ const { site } = defineProps<{
 
 setLayoutProps({
     breadcrumbs: [
-        { title: site.domain, href: showSite(site.id) },
+        { title: site.domain, href: showSite(site.uuid) },
         { title: 'Deploy script', href: '' },
     ],
 });
@@ -30,7 +30,7 @@ setLayoutProps({
         />
 
         <Form
-            v-bind="SiteController.update.form(site.id)"
+            v-bind="SiteController.update.form(site.uuid)"
             class="max-w-2xl space-y-6"
             v-slot="{ errors, processing }"
         >

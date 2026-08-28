@@ -120,7 +120,7 @@ watch(deploymentFinished, (isFinished) => {
             <div class="flex items-center gap-2">
                 <Form
                     v-if="site.status === 'active'"
-                    v-bind="DeploymentController.store.form(site.id)"
+                    v-bind="DeploymentController.store.form(site.uuid)"
                     v-slot="{ processing }"
                 >
                     <Button :disabled="isDeploying || processing">
@@ -130,7 +130,7 @@ watch(deploymentFinished, (isFinished) => {
                     </Button>
                 </Form>
                 <Button variant="outline" as-child>
-                    <Link :href="editSite(site.id)">
+                    <Link :href="editSite(site.uuid)">
                         <Pencil class="mr-2 size-4" />
                         Deploy script
                     </Link>
@@ -161,7 +161,7 @@ watch(deploymentFinished, (isFinished) => {
             <TabsContent value="overview">
                 <Form
                     v-if="site.status === 'failed'"
-                    v-bind="SiteController.retry.form(site.id)"
+                    v-bind="SiteController.retry.form(site.uuid)"
                     v-slot="{ processing }"
                 >
                     <Button type="submit" :disabled="processing">
@@ -203,7 +203,7 @@ watch(deploymentFinished, (isFinished) => {
                         <Link
                             v-for="deploy in site.deployments.slice(0, 5)"
                             :key="deploy.id"
-                            :href="showDeployment(deploy.id)"
+                            :href="showDeployment(deploy.uuid)"
                             class="flex items-center justify-between rounded-md p-2 text-sm hover:bg-muted"
                         >
                             <span class="flex items-center gap-2">
@@ -250,7 +250,7 @@ watch(deploymentFinished, (isFinished) => {
                         <Link
                             v-for="deploy in site.deployments"
                             :key="deploy.id"
-                            :href="showDeployment(deploy.id)"
+                            :href="showDeployment(deploy.uuid)"
                             class="flex items-center justify-between rounded-md p-2 text-sm hover:bg-muted"
                         >
                             <span class="flex items-center gap-2">
@@ -326,7 +326,7 @@ Secret: {{ webhookSecret }}</pre
                     </CardHeader>
                     <CardContent>
                         <Form
-                            v-bind="SiteSslController.store.form(site.id)"
+                            v-bind="SiteSslController.store.form(site.uuid)"
                             v-slot="{ processing }"
                         >
                             <Button
@@ -359,7 +359,7 @@ Secret: {{ webhookSecret }}</pre
                     <CardContent>
                         <Form
                             v-bind="
-                                SiteEnvironmentController.update.form(site.id)
+                                SiteEnvironmentController.update.form(site.uuid)
                             "
                             class="space-y-4"
                             v-slot="{ processing }"
@@ -387,7 +387,7 @@ Secret: {{ webhookSecret }}</pre
                     </CardHeader>
                     <CardContent>
                         <Button variant="outline" as-child>
-                            <Link :href="editSite(site.id)">
+                            <Link :href="editSite(site.uuid)">
                                 <Pencil class="mr-2 size-4" />
                                 Edit deploy script
                             </Link>

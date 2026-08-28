@@ -196,7 +196,7 @@ watch(finished, (isFinished) => {
                 <Link
                     v-for="site in sites"
                     :key="site.id"
-                    :href="showSite(site.id)"
+                    :href="showSite(site.uuid)"
                 >
                     <Card class="transition-colors hover:bg-muted/50">
                         <CardContent class="flex items-center justify-between">

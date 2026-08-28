@@ -25,6 +25,7 @@ export type GitConnection = {
 
 export type Site = {
     id: number;
+    uuid: string;
     team_id: number;
     server_id: number;
     domain: string;
