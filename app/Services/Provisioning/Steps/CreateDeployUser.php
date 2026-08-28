@@ -7,8 +7,8 @@ use App\Services\Provisioning\ProvisioningStep;
 
 /**
  * Creates an unprivileged deploy user, gives it passwordless sudo for only
- * the service-management commands it needs, copies the control plane's key
- * into its authorized_keys, and disables root password authentication.
+ * the service-management commands it needs, and copies the control plane's
+ * key into its authorized_keys.
  */
 class CreateDeployUser implements ProvisioningStep
 {
@@ -54,9 +54,6 @@ class CreateDeployUser implements ProvisioningStep
             SUDOERS
             chmod 440 /etc/sudoers.d/{$user}
             visudo -cf /etc/sudoers.d/{$user}
-            sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin prohibit-password/' /etc/ssh/sshd_config
-            sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-            systemctl reload ssh || systemctl reload sshd
             BASH;
     }
 }
