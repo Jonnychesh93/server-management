@@ -148,12 +148,27 @@ class RunDeploymentJob implements ShouldQueue
      */
     private function deployScript(string $releasePath, Site $site): string
     {
+        $phpVersion = $site->php_version;
+
         // A non-interactive SSH exec session doesn't source shell profile
         // files, so it can't be relied on to have /usr/local/bin (where
         // Composer lives) on PATH the way an interactive login shell does.
-        $exportPath = 'export PATH="/usr/local/bin:$PATH"';
-
-        return "cd {$releasePath}\n{$exportPath}\n{$site->deploy_script}";
+        //
+        // A bare "php"/"composer" would otherwise resolve to whichever
+        // version update-alternatives currently treats as the system-wide
+        // default — not necessarily this site's own configured version,
+        // which matters the moment a server hosts sites on different PHP
+        // versions. Shadow "php" with a shim pointing at the right binary,
+        // prepended ahead of everything else on PATH, so both the deploy
+        // script's own "php ..." calls and composer (which itself invokes
+        // "env php") resolve consistently to it.
+        return <<<BASH
+            mkdir -p {$releasePath}/.bin
+            ln -sf /usr/bin/php{$phpVersion} {$releasePath}/.bin/php
+            export PATH="{$releasePath}/.bin:/usr/local/bin:\$PATH"
+            cd {$releasePath}
+            {$site->deploy_script}
+            BASH;
     }
 
     /**

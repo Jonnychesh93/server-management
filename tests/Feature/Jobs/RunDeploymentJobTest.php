@@ -125,6 +125,38 @@ test('a second deployment does not overwrite an already-customized .env', functi
     expect($site->refresh()->env_encrypted)->toBe('APP_NAME=AlreadyCustomized');
 });
 
+test('the deploy script shims php to the site\'s own configured version', function () {
+    $server = Server::factory()->active()->create();
+    $site = Site::factory()->for($server->team)->for($server)->active()->create(['php_version' => '8.1']);
+    GitConnection::factory()->for($site)->create();
+    $deployment = Deployment::factory()->for($server->team)->for($site)->create();
+
+    $sftp = Mockery::mock(SFTP::class);
+    $sftp->shouldReceive('get')->andReturn(false);
+
+    $deployScript = null;
+    $connection = Mockery::mock(SshConnection::class);
+    $connection->shouldReceive('sftp')->andReturn($sftp);
+    $connection->shouldReceive('writeFile')->andReturnNull();
+    $connection->shouldReceive('run')->andReturnUsing(function (string $script) use (&$deployScript) {
+        if (str_contains($script, 'composer install')) {
+            $deployScript = $script;
+        }
+
+        return new SshResult(0, "DEPLOY_SHA=abc123\nDEPLOY_MSG=msg\n");
+    });
+
+    $connector = Mockery::mock(SshConnector::class);
+    $connector->shouldReceive('connect')->andReturn($connection);
+
+    app()->instance(SshConnector::class, $connector);
+
+    app()->call([new RunDeploymentJob($deployment), 'handle']);
+
+    expect($deployScript)->toContain('ln -sf /usr/bin/php8.1 ');
+    expect($deployScript)->toContain('.bin:/usr/local/bin:$PATH');
+});
+
 test('a deployment with no git connection fails immediately', function () {
     $server = Server::factory()->active()->create();
     $site = Site::factory()->for($server->team)->for($server)->active()->create();
