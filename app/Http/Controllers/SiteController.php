@@ -25,6 +25,22 @@ use Inertia\Response;
 class SiteController extends Controller
 {
     /**
+     * List the team's sites.
+     */
+    public function index(Request $request): Response
+    {
+        Gate::authorize('viewAny', Site::class);
+
+        return Inertia::render('sites/Index', [
+            'sites' => Site::query()
+                ->where('team_id', $request->user()->currentTeam->id)
+                ->with('server:id,name')
+                ->orderBy('domain')
+                ->get(),
+        ]);
+    }
+
+    /**
      * Show the form for adding a new site to a server.
      */
     public function create(Server $server): Response

@@ -6,6 +6,7 @@ use App\Http\Controllers\SiteSslController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('sites', [SiteController::class, 'index'])->name('sites.index');
     Route::get('servers/{server}/sites/create', [SiteController::class, 'create'])->name('sites.create');
     Route::post('servers/{server}/sites', [SiteController::class, 'store'])->name('sites.store');
 

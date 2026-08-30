@@ -144,6 +144,23 @@ test('a member cannot fetch a github repository\'s branches', function () {
         ->assertForbidden();
 });
 
+test('a user sees only their team\'s sites listed', function () {
+    [$team, $owner] = teamWithMember(TeamRole::Owner);
+    $server = Server::factory()->for($team)->active()->create();
+    $site = Site::factory()->for($team)->for($server)->active()->create();
+    $otherTeamSite = Site::factory()->active()->create();
+
+    $this->actingAs($owner)
+        ->get(route('sites.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('sites', 1)
+            ->where('sites.0.id', $site->id)
+        );
+
+    expect($otherTeamSite->team_id)->not->toBe($team->id);
+});
+
 test('a site is routed to by its uuid, not its sequential id', function () {
     [$team, $owner] = teamWithMember(TeamRole::Owner);
     $server = Server::factory()->for($team)->active()->create();
