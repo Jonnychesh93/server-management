@@ -13,15 +13,18 @@ import {
     index as serversIndex,
     show as showServer,
 } from '@/routes/servers';
+import { show as showSite } from '@/routes/sites';
 import type {
     ActivityLogEntry,
     Deployment,
     DeploymentStatus,
     ProvisioningStatus,
     Server,
+    Site,
+    SiteStatus,
 } from '@/types';
 
-const { stats, recentServers, recentDeployments, recentActivity } =
+const { stats, recentServers, recentSites, recentDeployments, recentActivity } =
     defineProps<{
         stats: {
             servers: number;
@@ -30,6 +33,7 @@ const { stats, recentServers, recentDeployments, recentActivity } =
             deployments: number;
         };
         recentServers: Server[];
+        recentSites: Site[];
         recentDeployments: Deployment[];
         recentActivity: ActivityLogEntry[];
     }>();
@@ -64,6 +68,16 @@ const deploymentVariant: Record<
     running: 'secondary',
     success: 'success',
     failed: 'destructive',
+};
+
+const siteStatusVariant: Record<
+    SiteStatus,
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
+> = {
+    provisioning: 'secondary',
+    active: 'success',
+    failed: 'destructive',
+    disabled: 'outline',
 };
 
 function timeAgo(date: string): string {
@@ -264,7 +278,7 @@ function timeAgo(date: string): string {
                 </Card>
             </div>
 
-            <div class="grid gap-6 lg:grid-cols-2">
+            <div class="grid gap-6 lg:grid-cols-3">
                 <Card>
                     <CardContent class="space-y-1">
                         <div class="mb-3 flex items-center justify-between">
@@ -296,6 +310,31 @@ function timeAgo(date: string): string {
                                 "
                             >
                                 {{ capitalize(server.provisioning_status) }}
+                            </Badge>
+                        </Link>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardContent class="space-y-1">
+                        <div class="mb-3 flex items-center justify-between">
+                            <h2 class="font-medium">Sites</h2>
+                        </div>
+                        <p
+                            v-if="recentSites.length === 0"
+                            class="py-6 text-center text-sm text-muted-foreground"
+                        >
+                            No sites yet.
+                        </p>
+                        <Link
+                            v-for="site in recentSites"
+                            :key="site.id"
+                            :href="showSite(site.uuid)"
+                            class="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-muted"
+                        >
+                            <span class="font-medium">{{ site.domain }}</span>
+                            <Badge :variant="siteStatusVariant[site.status]">
+                                {{ capitalize(site.status) }}
                             </Badge>
                         </Link>
                     </CardContent>

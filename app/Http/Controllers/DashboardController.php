@@ -30,6 +30,11 @@ class DashboardController extends Controller
                 'deployments' => Deployment::query()->where('team_id', $team->id)->count(),
             ],
             'recentServers' => $team->servers()->latest()->limit(4)->get(),
+            'recentSites' => Site::query()
+                ->where('team_id', $team->id)
+                ->latest()
+                ->limit(4)
+                ->get(),
             'recentDeployments' => Deployment::query()
                 ->where('team_id', $team->id)
                 ->with('site:id,domain')

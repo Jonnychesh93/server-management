@@ -112,11 +112,10 @@ let deploymentOutput = ref('');
 let deploymentFinished = ref(false);
 
 if (latestDeployment) {
-    ({ output: deploymentOutput, finished: deploymentFinished } =
-        useLiveOutput(
-            `teams.${site.team_id}.deployments.${latestDeployment.id}`,
-            latestDeployment.output,
-        ));
+    ({ output: deploymentOutput, finished: deploymentFinished } = useLiveOutput(
+        `teams.${site.team_id}.deployments.${latestDeployment.id}`,
+        latestDeployment.output,
+    ));
 }
 
 const isDeploying = computed(
@@ -156,7 +155,10 @@ watch(deploymentFinished, (isFinished) => {
                     v-slot="{ processing }"
                 >
                     <Button :disabled="isDeploying || processing">
-                        <Spinner v-if="isDeploying || processing" class="mr-2 size-4" />
+                        <Spinner
+                            v-if="isDeploying || processing"
+                            class="mr-2 size-4"
+                        />
                         <Rocket v-else class="mr-2 size-4" />
                         {{ isDeploying ? 'Deploying…' : 'Deploy now' }}
                     </Button>
@@ -214,8 +216,7 @@ watch(deploymentFinished, (isFinished) => {
                         </p>
                         <pre
                             class="max-h-96 overflow-auto rounded-md bg-muted p-4 text-xs"
-                            >{{ output }}</pre
-                        >
+                            >{{ output }}</pre>
                     </CardContent>
                 </Card>
 
@@ -226,8 +227,7 @@ watch(deploymentFinished, (isFinished) => {
                     <CardContent>
                         <pre
                             class="max-h-96 overflow-auto rounded-md bg-muted p-4 text-xs"
-                            >{{ deploymentOutput }}</pre
-                        >
+                            >{{ deploymentOutput }}</pre>
                     </CardContent>
                 </Card>
 
@@ -273,8 +273,7 @@ watch(deploymentFinished, (isFinished) => {
                     <CardContent>
                         <pre
                             class="max-h-96 overflow-auto rounded-md bg-muted p-4 text-xs"
-                            >{{ deploymentOutput }}</pre
-                        >
+                            >{{ deploymentOutput }}</pre>
                     </CardContent>
                 </Card>
 
@@ -335,8 +334,7 @@ watch(deploymentFinished, (isFinished) => {
                                 class="overflow-x-auto rounded-md bg-muted p-4 text-xs"
                                 >{{
                                     site.git_connection.deploy_key.public_key
-                                }}</pre
-                            >
+                                }}</pre>
                         </div>
                         <div v-if="webhookUrl && webhookSecret">
                             <p class="mb-2 text-sm text-muted-foreground">
@@ -348,8 +346,7 @@ watch(deploymentFinished, (isFinished) => {
                                 class="overflow-x-auto rounded-md bg-muted p-4 text-xs"
                             >
 URL: {{ webhookUrl }}
-Secret: {{ webhookSecret }}</pre
-                            >
+Secret: {{ webhookSecret }}</pre>
                         </div>
                     </CardContent>
                 </Card>
@@ -423,9 +420,7 @@ Secret: {{ webhookSecret }}</pre
                             class="flex items-center justify-between rounded-md p-2 text-sm hover:bg-muted"
                         >
                             <span class="flex items-center gap-2">
-                                <Badge
-                                    :variant="commandVariant[entry.status]"
-                                >
+                                <Badge :variant="commandVariant[entry.status]">
                                     {{ capitalize(entry.status) }}
                                 </Badge>
                                 <span class="font-mono text-xs">{{
