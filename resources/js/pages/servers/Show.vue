@@ -163,7 +163,7 @@ watch(finished, (isFinished) => {
             </Button>
         </Form>
 
-        <Card v-if="output || isProvisioning">
+        <Card v-if="isProvisioning || server.provisioning_status === 'failed'">
             <CardContent>
                 <p class="mb-2 text-sm text-muted-foreground">
                     Provisioning output

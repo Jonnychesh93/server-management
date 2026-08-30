@@ -188,7 +188,12 @@ watch(deploymentFinished, (isFinished) => {
                     </Button>
                 </Form>
 
-                <Card v-if="output || site.status === 'provisioning'">
+                <Card
+                    v-if="
+                        site.status === 'provisioning' ||
+                        site.status === 'failed'
+                    "
+                >
                     <CardContent>
                         <p class="mb-2 text-sm text-muted-foreground">
                             Provisioning output
