@@ -25,11 +25,11 @@ setLayoutProps({
 
 const statusVariant: Record<
     DeploymentStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     queued: 'outline',
     running: 'secondary',
-    success: 'default',
+    success: 'success',
     failed: 'destructive',
 };
 

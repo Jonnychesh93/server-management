@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/vue3';
 import { Pencil, Plus, Trash2 } from '@lucide/vue';
-import { watch } from 'vue';
+import { computed, watch } from 'vue';
 import ServerController from '@/actions/App/Http/Controllers/ServerController';
 import AddCronDialog from '@/components/AddCronDialog.vue';
 import AddDaemonDialog from '@/components/AddDaemonDialog.vue';
@@ -39,10 +39,10 @@ const { server, sites, daemons, crons, databases } = defineProps<{
 
 const siteStatusVariant: Record<
     SiteStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     provisioning: 'secondary',
-    active: 'default',
+    active: 'success',
     failed: 'destructive',
     disabled: 'outline',
 };
@@ -56,28 +56,30 @@ setLayoutProps({
 
 const provisioningVariant: Record<
     ProvisioningStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     pending: 'outline',
     connecting: 'secondary',
     installing: 'secondary',
-    active: 'default',
+    active: 'success',
     failed: 'destructive',
 };
 
 const connectionVariant: Record<
     ConnectionStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
-    online: 'default',
+    online: 'success',
     offline: 'destructive',
     unknown: 'outline',
 };
 
-const isProvisioning =
-    server.provisioning_status === 'connecting' ||
-    server.provisioning_status === 'installing' ||
-    server.provisioning_status === 'pending';
+const isProvisioning = computed(
+    () =>
+        server.provisioning_status === 'connecting' ||
+        server.provisioning_status === 'installing' ||
+        server.provisioning_status === 'pending',
+);
 
 const { output, finished } = useLiveOutput(
     `teams.${server.team_id}.servers.${server.id}.provisioning`,
@@ -112,7 +114,10 @@ watch(finished, (isFinished) => {
         </div>
 
         <div class="flex items-center gap-2">
-            <Badge :variant="provisioningVariant[server.provisioning_status]">
+            <Badge
+                v-if="server.provisioning_status !== 'active'"
+                :variant="provisioningVariant[server.provisioning_status]"
+            >
                 Provisioning: {{ capitalize(server.provisioning_status) }}
             </Badge>
             <Badge :variant="connectionVariant[server.connection_status]">
@@ -245,7 +250,7 @@ watch(finished, (isFinished) => {
                         <Badge
                             :variant="
                                 database.status === 'active'
-                                    ? 'default'
+                                    ? 'success'
                                     : database.status === 'failed'
                                       ? 'destructive'
                                       : 'outline'
@@ -300,7 +305,7 @@ watch(finished, (isFinished) => {
                         <Badge
                             :variant="
                                 daemon.status === 'active'
-                                    ? 'default'
+                                    ? 'success'
                                     : daemon.status === 'failed'
                                       ? 'destructive'
                                       : 'outline'
@@ -353,7 +358,7 @@ watch(finished, (isFinished) => {
                         <Badge
                             :variant="
                                 cron.status === 'active'
-                                    ? 'default'
+                                    ? 'success'
                                     : cron.status === 'failed'
                                       ? 'destructive'
                                       : 'outline'

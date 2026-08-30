@@ -28,12 +28,12 @@ defineOptions({
 
 const provisioningVariant: Record<
     ProvisioningStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     pending: 'outline',
     connecting: 'secondary',
     installing: 'secondary',
-    active: 'default',
+    active: 'success',
     failed: 'destructive',
 };
 

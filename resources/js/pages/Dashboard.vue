@@ -47,22 +47,22 @@ const hasServers = computed(() => stats.servers > 0);
 
 const provisioningVariant: Record<
     ProvisioningStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     pending: 'outline',
     connecting: 'secondary',
     installing: 'secondary',
-    active: 'default',
+    active: 'success',
     failed: 'destructive',
 };
 
 const deploymentVariant: Record<
     DeploymentStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     queued: 'outline',
     running: 'secondary',
-    success: 'default',
+    success: 'success',
     failed: 'destructive',
 };
 

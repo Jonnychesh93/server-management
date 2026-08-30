@@ -1,14 +1,13 @@
 <script setup lang="ts">
 import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/vue3';
 import { Pencil, Rocket } from '@lucide/vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import CommandController from '@/actions/App/Http/Controllers/CommandController';
 import DeploymentController from '@/actions/App/Http/Controllers/DeploymentController';
 import SiteController from '@/actions/App/Http/Controllers/SiteController';
 import SiteEnvironmentController from '@/actions/App/Http/Controllers/SiteEnvironmentController';
 import SiteSslController from '@/actions/App/Http/Controllers/SiteSslController';
 import DeleteSiteDialog from '@/components/DeleteSiteDialog.vue';
-import Heading from '@/components/Heading.vue';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -56,41 +55,43 @@ setLayoutProps({
 
 const statusVariant: Record<
     SiteStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     provisioning: 'secondary',
-    active: 'default',
+    active: 'success',
     failed: 'destructive',
     disabled: 'outline',
 };
 
+const siteUrl = `${site.ssl_status === 'active' ? 'https' : 'http'}://${site.domain}`;
+
 const sslVariant: Record<
     SslStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     none: 'outline',
     pending: 'secondary',
-    active: 'default',
+    active: 'success',
     failed: 'destructive',
 };
 
 const deploymentVariant: Record<
     DeploymentStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     queued: 'outline',
     running: 'secondary',
-    success: 'default',
+    success: 'success',
     failed: 'destructive',
 };
 
 const commandVariant: Record<
     CommandStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
+    'default' | 'secondary' | 'destructive' | 'success' | 'outline'
 > = {
     queued: 'outline',
     running: 'secondary',
-    success: 'default',
+    success: 'success',
     failed: 'destructive',
 };
 
@@ -106,10 +107,6 @@ watch(finished, (isFinished) => {
 });
 
 const latestDeployment = site.deployments?.[0] ?? null;
-const isDeploying =
-    latestDeployment !== null &&
-    (latestDeployment.status === 'queued' ||
-        latestDeployment.status === 'running');
 
 let deploymentOutput = ref('');
 let deploymentFinished = ref(false);
@@ -121,6 +118,14 @@ if (latestDeployment) {
             latestDeployment.output,
         ));
 }
+
+const isDeploying = computed(
+    () =>
+        latestDeployment !== null &&
+        !deploymentFinished.value &&
+        (latestDeployment.status === 'queued' ||
+            latestDeployment.status === 'running'),
+);
 
 watch(deploymentFinished, (isFinished) => {
     if (isFinished) {
@@ -134,7 +139,16 @@ watch(deploymentFinished, (isFinished) => {
 
     <div class="flex flex-col space-y-6 p-4 md:p-6">
         <div class="flex items-center justify-between">
-            <Heading :title="site.domain" />
+            <header class="mb-8 space-y-0.5">
+                <a
+                    :href="siteUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="text-xl font-semibold tracking-tight hover:underline"
+                >
+                    {{ site.domain }}
+                </a>
+            </header>
             <div class="flex items-center gap-2">
                 <Form
                     v-if="site.status === 'active'"
